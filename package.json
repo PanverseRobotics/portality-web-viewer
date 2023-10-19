@@ -1,0 +1,15 @@
+{
+  "name": "gauss-splat-renderer",
+  "version": "1.0.0",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js",
+    "test": "mocha",
+    "cover": "istanbul cover node_modules/mocha/bin/_mocha --dir ./reports/coverage"
+  },
+  "dependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0"
+  }
+}
