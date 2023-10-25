@@ -3,12 +3,13 @@
 
 <head>
     <title>Test page.</title>
-    <script src="../node_modules/gpu.js/dist/gpu-browser.js"></script>
     <script src="../lib/kernels/shader.js"></script>
     <script src="../lib/kernels/to-array.js"></script>
     <script src="../lib/kernels/to-texture.js"></script>
     <script src="../lib/kernels/ordering-encode.js"></script>
     <script src="../lib/kernels/ordering-decode.js"></script>
+    <script src="../lib/kernels/bitonic.js"></script>
+    <script src="../lib/bitonic.js"></script>
 </head>
 
 <body>
@@ -53,6 +54,31 @@
             inputEnc: xa,
             inputDec: ya
         }
+    }
+
+    function sortingBasic(group_size, n_groups) {
+        const n = group_size*n_groups;
+
+        var inp = new Float32Array(n);
+
+        for (var j = 0; j < n_groups; ++j){
+            for (var i = 0; i < group_size; ++i) {
+                inp[j*group_size + i] = (j%2==0) ? i : group_size-i;
+            }
+        }
+
+        const texKer = toTextureKernel(gl, group_size, n_groups);
+        const bitKer = bitonicKernel(gl, group_size, n_groups);
+
+        let inx = texKer(inp);
+        let result = bitonicSort(bitKer, inx, n_groups);
+
+        return {
+            input: inp,
+            inputTex: inx.toArray(),
+            output: result.toArray()
+        }
+
     }
     
 </script>
