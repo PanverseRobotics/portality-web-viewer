@@ -1,7 +1,14 @@
 import chai from 'chai';
+const { expect } = chai;
+
 import bitonicSort, {createSortKernel} from '../lib/bitonic.js';
 
-const { expect } = chai;
+import gpujs from 'gpu.js'
+const { GPU } = gpujs;
+export const gpu = new GPU({
+    //canvas: canvas,
+    mode: 'gpu'
+});
 
 describe('bitonicSort', () => {
   it('should produce sorted output', () => {
@@ -14,7 +21,7 @@ describe('bitonicSort', () => {
             inp[i] = Math.random();
         }
 
-        var ker = createSortKernel(n);
+        var ker = createSortKernel(gpu, n);
 
         const resultTexture = bitonicSort(ker, inp, 32);
         const resultArray = resultTexture.toArray();

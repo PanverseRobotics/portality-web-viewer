@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test page.</title>
+    <script src="../node_modules/gpu.js/dist/gpu-browser.js"></script>
+    <script src="../lib/kernels/shader.js"></script>
+    <script src="../lib/kernels/to-array.js"></script>
+    <script src="../lib/kernels/to-texture.js"></script>
+    <script src="../lib/kernels/ordering-encode.js"></script>
+    <script src="../lib/kernels/ordering-decode.js"></script>
+</head>
+
+<body>
+    <h1>Test Page</h1>
+    <p>Page containing test scripts for kernels.</p>
+    <canvas id="gl-canvas"></canvas>
+    <p><code id="result" style="display:block; white-space:pre-wrap"></code></p>
+</body>
+
+<script>
+    const canvas = document.getElementById("gl-canvas");
+    const gl = canvas.getContext("webgl2");
+
+    function orderingSimpleEncDec(group_size, n_groups) {
+
+        const n = group_size*n_groups;
+
+        var inp = new Float32Array(n);
+        for (var i = 0; i < n; ++i) {
+            inp[i] = i;
+        }
+
+        const glExtColBuf = gl.getExtension('EXT_color_buffer_float');
+        const glOESTexFlLin = gl.getExtension('OES_texture_float_linear');
+
+        const texKer = toTextureKernel(gl, group_size, n_groups);
+        const encKer = encodeKernel(gl, group_size, n_groups);
+        const decKer = decodeKernel(gl, group_size, n_groups);
+
+        let inx = texKer(inp);
+
+        let x = encKer(inx);
+        let y = decKer(x);
+
+        let inxa = inx.toArray();
+        let xa = x.toArray();
+        let ya = y.toArray();
+
+        return {
+            inputs: inp, 
+            inputTex: inxa,
+            inputEnc: xa,
+            inputDec: ya
+        }
+    }
+    
+</script>
+
+</html>
