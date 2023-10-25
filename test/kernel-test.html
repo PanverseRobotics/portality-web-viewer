@@ -32,9 +32,6 @@
             inp[i] = i;
         }
 
-        const glExtColBuf = gl.getExtension('EXT_color_buffer_float');
-        const glOESTexFlLin = gl.getExtension('OES_texture_float_linear');
-
         const texKer = toTextureKernel(gl, group_size, n_groups);
         const encKer = encodeKernel(gl, group_size, n_groups);
         const decKer = decodeKernel(gl, group_size, n_groups);
@@ -56,6 +53,22 @@
         }
     }
 
+    function sortArray(inp, n, m){
+        const texKer = toTextureKernel(gl, n, m);
+        const bitKer = [bitonicKernel(gl, n, m), bitonicKernel(gl, n, m)];
+        
+        let inx = texKer(inp);
+        let inxa = inx.toArray();
+        let result = bitonicSort(bitKer, inx, n);
+        //let result = bitKer(inx, 1, 2);
+
+        return {
+            input: inp,
+            inputTex: inx.toArray(),
+            output: result.toArray()
+        };
+    }
+
     function sortingBasic(group_size, n_groups) {
         const n = group_size*n_groups;
 
@@ -63,24 +76,24 @@
 
         for (var j = 0; j < n_groups; ++j){
             for (var i = 0; i < group_size; ++i) {
-                inp[j*group_size + i] = (j%2==0) ? i : group_size-i;
+                inp[j*group_size + i] = (j%2==0) ? j*group_size+i : (j+1)*group_size-i-1;
             }
         }
 
-        const texKer = toTextureKernel(gl, group_size, n_groups);
-        const bitKer = bitonicKernel(gl, group_size, n_groups);
-
-        let inx = texKer(inp);
-        let result = bitonicSort(bitKer, inx, n_groups);
-
-        return {
-            input: inp,
-            inputTex: inx.toArray(),
-            output: result.toArray()
-        }
-
+        return sortArray(inp, group_size, n_groups);
     }
     
+    function sortingRandom(group_size, n_groups) {
+        const n = group_size*n_groups;
+
+        var inp = new Float32Array(n);
+
+        for (var i = 0; i < n; ++i){
+            inp[i] = Math.random();
+        }
+
+        return sortArray(inp, group_size, n_groups);
+    }
 </script>
 
 </html>

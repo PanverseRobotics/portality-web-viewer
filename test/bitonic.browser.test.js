@@ -27,14 +27,24 @@ describe('Local page', () => {
     });
 
     it('Output should be sorted..', async() => {
-        const result = await page.evaluate(() => {
-            return sortingBasic(32, 2);
+        const result1 = await page.evaluate(() => {
+            return sortingBasic(8, 8);
         });
 
-        // First 32 elements should be sorted in increasing order.
-        for (var i=1; i<32*2; ++i)
+        for (var i=1; i<64; ++i)
         {
-            expect(result.output[i]).to.be.at.least(result.output[i-1]);
+            expect(result1.output[i]).to.be.at.least(result1.output[i-1] + 0.5);
+        }
+
+        const result2 = await page.evaluate(() => {
+            return sortingRandom(32, 4);
+        });
+
+        for (var i=0; i<128; ++i)
+        {
+            if ((i%32)!=0){
+                expect(result2.output[i]).to.be.at.least(result2.output[i-1]);
+            }
         }
     });
 });
