@@ -3,13 +3,14 @@
 
 <head>
     <title>Test page.</title>
-    <script src="../lib/kernels/shader.js"></script>
-    <script src="../lib/kernels/to-array.js"></script>
-    <script src="../lib/kernels/to-texture.js"></script>
-    <script src="../lib/kernels/ordering-encode.js"></script>
-    <script src="../lib/kernels/ordering-decode.js"></script>
-    <script src="../lib/kernels/bitonic.js"></script>
-    <script src="../lib/bitonic.js"></script>
+    <script src="../../lib/kernels/shader.js"></script>
+    <script src="../../lib/kernels/to-array.js"></script>
+    <script src="../../lib/kernels/to-texture.js"></script>
+    <script src="../../lib/kernels/ordering-encode.js"></script>
+    <script src="../../lib/kernels/ordering-decode.js"></script>
+    <script src="../../lib/kernels/bitonic.js"></script>
+    <script src="../../lib/kernels/permute.js"></script>
+    <script src="../../lib/bitonic.js"></script>
 </head>
 
 <body>
@@ -33,8 +34,8 @@
         }
 
         const texKer = toTextureKernel(gl, group_size, n_groups);
-        const encKer = encodeKernel(gl, group_size, n_groups);
-        const decKer = decodeKernel(gl, group_size, n_groups);
+        const encKer = createEncodeKernel(gl, group_size, n_groups);
+        const decKer = createDecodeKernel(gl, group_size, n_groups);
 
         let inx = texKer(inp);
 
@@ -55,12 +56,11 @@
 
     function sortArray(inp, n, m){
         const texKer = toTextureKernel(gl, n, m);
-        const bitKer = [bitonicKernel(gl, n, m), bitonicKernel(gl, n, m)];
+        const bitKer = [createBitonicKernel(gl, n, m), createBitonicKernel(gl, n, m)];
         
         let inx = texKer(inp);
         let inxa = inx.toArray();
         let result = bitonicSort(bitKer, inx, n);
-        //let result = bitKer(inx, 1, 2);
 
         return {
             input: inp,
@@ -94,6 +94,40 @@
 
         return sortArray(inp, group_size, n_groups);
     }
+
+    function permuteBasic(group_size){
+        const n_groups = 3;
+        const n = group_size*n_groups;
+
+        const texKer1 = toTextureKernel(gl, group_size, n_groups);
+        const texKer2 = toTextureKernel(gl, 4, n_groups);
+        const permKer = createPermuteKernel(gl, group_size, n_groups);
+
+        var inp = new Float32Array(n);
+        for (var i = 0; i < n; ++i){
+            inp[i] = i;
+        }
+
+        var inpIdx = new Float32Array(n);
+        inpIdx[0] = 2;
+        inpIdx[4] = 0;
+        inpIdx[8] = 1;
+        
+        let inpx = texKer1(inp);
+        let inpIdxx = texKer2(inpIdx);
+
+        let y = permKer(inpx, inpIdxx);
+
+        return {
+            input: inp, 
+            inputTex: inpx.toArray(),
+            //inputIdxTex: inpIdxx.toArray(),
+            output: y.toArray()
+        }
+
+    }
+
+    permuteBasic(8);
 </script>
 
 </html>

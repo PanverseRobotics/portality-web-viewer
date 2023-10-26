@@ -5,14 +5,14 @@ import path from 'path';
 
 const { expect } = chai;
 
-describe('Local page', () => {
+describe('Group-level ordering', () => {
     let browser;
     let page;
 
     before(async () => {
-        browser = await launch();
+        browser = await launch({ headless: "new" });
         page = await browser.newPage();
-        var contentHtml = fs.readFileSync('./test/kernel-test.html', 'utf8');
+        var contentHtml = fs.readFileSync('./test/browser/kernel-test.html', 'utf8');
         await page.setContent(contentHtml);
 
         await page.addScriptTag({ path: path.join('./lib/kernels/shader.js')});

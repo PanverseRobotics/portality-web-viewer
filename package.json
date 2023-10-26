@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "test": "mocha",
+    "test": "mocha \"test/**/*.js\"",
     "cover": "istanbul cover node_modules/mocha/bin/_mocha --dir ./reports/coverage"
   },
   "dependencies": {

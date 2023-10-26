@@ -5,14 +5,14 @@ import path from 'path';
 
 const { expect } = chai;
 
-describe('Local page', () => {
+describe('Bitonic sort', () => {
     let browser;
     let page;
 
     before(async () => {
-        browser = await launch();
+        browser = await launch({ headless: "new" });
         page = await browser.newPage();
-        var contentHtml = fs.readFileSync('./test/kernel-test.html', 'utf8');
+        var contentHtml = fs.readFileSync('./test/browser/kernel-test.html', 'utf8');
         await page.setContent(contentHtml);
 
         await page.addScriptTag({ path: path.join('./lib/kernels/shader.js')});
@@ -26,7 +26,7 @@ describe('Local page', () => {
         await browser.close();
     });
 
-    it('Output should be sorted..', async() => {
+    it('Output should be sorted', async() => {
         const result1 = await page.evaluate(() => {
             return sortingBasic(8, 8);
         });
