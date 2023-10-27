@@ -10,6 +10,7 @@
     <script src="../../lib/kernels/ordering-decode.js"></script>
     <script src="../../lib/kernels/bitonic.js"></script>
     <script src="../../lib/kernels/permute.js"></script>
+    <script src="../../lib/kernels/depth.js"></script>
     <script src="../../lib/bitonic.js"></script>
 </head>
 
@@ -33,11 +34,9 @@
             inp[i] = i;
         }
 
-        const texKer = toTextureKernel(gl, group_size, n_groups);
+        const inx = toTexture(gl, inp, group_size, n_groups);
         const encKer = createEncodeKernel(gl, group_size, n_groups);
         const decKer = createDecodeKernel(gl, group_size, n_groups);
-
-        let inx = texKer(inp);
 
         let x = encKer(inx);
         let y = decKer(x);
@@ -55,10 +54,9 @@
     }
 
     function sortArray(inp, n, m){
-        const texKer = toTextureKernel(gl, n, m);
+        const inx = toTexture(gl, inp, n, m);
         const bitKer = [createBitonicKernel(gl, n, m), createBitonicKernel(gl, n, m)];
         
-        let inx = texKer(inp);
         let inxa = inx.toArray();
         let result = bitonicSort(bitKer, inx, n);
 
@@ -99,8 +97,6 @@
         const n_groups = 3;
         const n = group_size*n_groups;
 
-        const texKer1 = toTextureKernel(gl, group_size, n_groups);
-        const texKer2 = toTextureKernel(gl, 4, n_groups);
         const permKer = createPermuteKernel(gl, group_size, n_groups);
 
         var inp = new Float32Array(n);
@@ -110,11 +106,11 @@
 
         var inpIdx = new Float32Array(n);
         inpIdx[0] = 2;
-        inpIdx[4] = 0;
-        inpIdx[8] = 1;
+        inpIdx[1] = 0;
+        inpIdx[2] = 1;
         
-        let inpx = texKer1(inp);
-        let inpIdxx = texKer2(inpIdx);
+        const inpx = toTexture(gl, inp, group_size, n_groups);
+        const inpIdxx = toTexture(gl, inpIdx, 1, n_groups);
 
         let y = permKer(inpx, inpIdxx);
 
@@ -124,10 +120,38 @@
             //inputIdxTex: inpIdxx.toArray(),
             output: y.toArray()
         }
+    }
 
+    function depthBasic(group_size, n_groups) {
+        const n = group_size*n_groups;
+        var coords = new Float32Array(3*n);
+        for (var i = 0; i < n; ++i){
+            coords[3*i+0] = Math.random();
+            coords[3*i+1] = Math.random();
+            coords[3*i+2] = Math.random();
+        }
+
+        var viewMat = new Float32Array(16);
+        viewMat[4*0+0] = 1.0;
+        viewMat[4*1+1] = 1.0;
+        viewMat[4*2+2] = 2.5;
+        viewMat[4*3+3] = 1.0;
+
+        const depthKer = createDepthKernel(gl, group_size, n_groups);
+
+        let coordsx = toTexture(gl, coords, group_size, n_groups, 'float', 3);
+        let depths = depthKer(coordsx, viewMat);
+
+        let depthsa = depths.toArray();
+        
+        return {
+            input: coords, 
+            output: depthsa
+        }
     }
 
     permuteBasic(8);
+    depthBasic(8, 2);
 </script>
 
 </html>
