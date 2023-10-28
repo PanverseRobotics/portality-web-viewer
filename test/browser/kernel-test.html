@@ -53,9 +53,12 @@
         }
     }
 
-    function sortArray(inp, n, m){
+    function sortArray(inp, n, m, order='forward'){
         const inx = toTexture(gl, inp, n, m);
-        const bitKer = [createBitonicKernel(gl, n, m), createBitonicKernel(gl, n, m)];
+        const bitKer = [
+            createBitonicKernel(gl, n, m, order),
+            createBitonicKernel(gl, n, m, order)
+        ];
         
         let inxa = inx.toArray();
         let result = bitonicSort(bitKer, inx, n);
@@ -67,7 +70,7 @@
         };
     }
 
-    function sortingBasic(group_size, n_groups) {
+    function sortingBasic(group_size, n_groups, order='forward') {
         const n = group_size*n_groups;
 
         var inp = new Float32Array(n);
@@ -78,10 +81,10 @@
             }
         }
 
-        return sortArray(inp, group_size, n_groups);
+        return sortArray(inp, group_size, n_groups, order);
     }
     
-    function sortingRandom(group_size, n_groups) {
+    function sortingRandom(group_size, n_groups, order='forward') {
         const n = group_size*n_groups;
 
         var inp = new Float32Array(n);
@@ -90,7 +93,7 @@
             inp[i] = Math.random();
         }
 
-        return sortArray(inp, group_size, n_groups);
+        return sortArray(inp, group_size, n_groups, order);
     }
 
     function permuteBasic(group_size){
@@ -143,7 +146,7 @@
         let depths = depthKer(coordsx, viewMat);
 
         let depthsa = depths.toArray();
-        
+
         return {
             input: coords, 
             output: depthsa
