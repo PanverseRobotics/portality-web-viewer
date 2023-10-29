@@ -10,6 +10,7 @@
     <script src="../../lib/kernels/ordering-decode.js"></script>
     <script src="../../lib/kernels/bitonic.js"></script>
     <script src="../../lib/kernels/permute.js"></script>
+    <script src="../../lib/kernels/to-float.js"></script>
     <script src="../../lib/kernels/depth.js"></script>
     <script src="../../lib/bitonic.js"></script>
 </head>
@@ -101,27 +102,30 @@
         const n = group_size*n_groups;
 
         const permKer = createPermuteKernel(gl, group_size, n_groups);
+        const toRG32FKer = createToRG32FKernel(gl, group_size, n_groups);
 
         var inp = new Float32Array(n);
-        for (var i = 0; i < n; ++i){
-            inp[i] = i;
+        for (var j = 0; j < n_groups; ++j){
+            for (var i = 0; i < group_size; ++i){
+                inp[j*group_size + i] = j==1 ? group_size-i-1 : i;
+            }
         }
 
-        var inpIdx = new Float32Array(n);
+        var inpIdx = new Uint32Array(n);
         inpIdx[0] = 2;
         inpIdx[1] = 0;
         inpIdx[2] = 1;
         
         const inpx = toTexture(gl, inp, group_size, n_groups);
-        const inpIdxx = toTexture(gl, inpIdx, 1, n_groups);
+        const inpIdxx = toTexture(gl, inpIdx, 1, n_groups, 'unsigned');
 
         let y = permKer(inpx, inpIdxx);
+        let z = toRG32FKer(y);
 
         return {
             input: inp, 
             inputTex: inpx.toArray(),
-            //inputIdxTex: inpIdxx.toArray(),
-            output: y.toArray()
+            output: z.toArray()
         }
     }
 

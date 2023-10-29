@@ -18,6 +18,7 @@ describe('Permute groups', () => {
         await page.addScriptTag({ path: path.join('./lib/kernels/shader.js')});
         await page.addScriptTag({ path: path.join('./lib/kernels/to-array.js')});
         await page.addScriptTag({ path: path.join('./lib/kernels/to-texture.js')});
+        await page.addScriptTag({ path: path.join('./lib/kernels/to-float.js')});
         await page.addScriptTag({ path: path.join('./lib/kernels/permute.js')});
     });
 
@@ -32,13 +33,13 @@ describe('Permute groups', () => {
 
         var i;
         for(i=0; i<8; ++i){
-            expect(result.input[i]).to.equal(result.output[i+8]);
+            expect(result.input[i]).to.equal(result.output[2*(i+8)]);
         }
         for(i=0; i<8; ++i){
-            expect(result.input[i+8]).to.equal(result.output[i+16]);
+            expect(result.input[i+8]).to.equal(result.output[2*(i+16)]);
         }
         for(i=0; i<8; ++i){
-            expect(result.input[i+16]).to.equal(result.output[i]);
+            expect(result.input[i+16]).to.equal(result.output[2*i]);
         }
     });
 });
