@@ -3,30 +3,78 @@
 
 <head>
     <title>Test page.</title>
-    <script src="../../lib/kernels/shader.js"></script>
-    <script src="../../lib/kernels/to-array.js"></script>
-    <script src="../../lib/kernels/to-texture.js"></script>
-    <script src="../../lib/kernels/ordering-encode.js"></script>
-    <script src="../../lib/kernels/ordering-decode.js"></script>
-    <script src="../../lib/kernels/bitonic.js"></script>
-    <script src="../../lib/kernels/permute.js"></script>
-    <script src="../../lib/kernels/to-float.js"></script>
-    <script src="../../lib/kernels/depth.js"></script>
-    <script src="../../lib/bitonic.js"></script>
+    <link rel="stylesheet" href="../../node_modules/mocha/mocha.css">
 </head>
 
 <body>
-    <h1>Test Page</h1>
-    <p>Page containing test scripts for kernels.</p>
-    <canvas id="gl-canvas"></canvas>
+    <h1 style="background-color:powderblue;font-family:arial;">Test Page</h1>
+    <p style="font-family:arial;">Page containing test scripts for kernels.</p>
     <p><code id="result" style="display:block; white-space:pre-wrap"></code></p>
+    <div id="mocha"></div>
+    <canvas id="gl-canvas" width="32" height="32"></canvas>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <script src="../../node_modules/mocha/mocha.js"></script>
+    <script src="../../lib/pipeline.js" type="module"></script>
+    <script>mocha.setup('bdd')</script>
 </body>
 
-<script>
+<script type="module">
     const canvas = document.getElementById("gl-canvas");
     const gl = canvas.getContext("webgl2");
 
-    function orderingSimpleEncDec(group_size, n_groups) {
+    import { createEncodeKernel, createDecodeKernel } from "../../lib/kernels/ordering.js";
+    import createDepthKernel from "../../lib/kernels/depth.js";
+    import createPermuteKernel from "../../lib/kernels/permute.js";
+
+    import {toTexture, createBitonicKernel, bitonicSort} from '../../lib/pipeline.js'
+
+    const { expect } = chai;
+
+    function sortArray(gl, inp, n, m, order='forward'){
+        const inx = toTexture(gl, inp, n, m);
+
+        const bitKer = [
+            createBitonicKernel(gl, n, m, order),
+            createBitonicKernel(gl, n, m, order)
+        ];
+        
+        let inxa = inx.toArray();
+        let result = bitonicSort(bitKer, inx, n);
+
+        return {
+            input: inp,
+            inputTex: inx.toArray(),
+            output: result.toArray()
+        };
+    }
+
+    var sortingBasic = function(gl, group_size, n_groups, order='forward') {
+        const n = group_size*n_groups;
+
+        var inp = new Float32Array(n);
+
+        for (var j = 0; j < n_groups; ++j){
+            for (var i = 0; i < group_size; ++i) {
+                inp[j*group_size + i] = (j%2==0) ? j*group_size+i : (j+1)*group_size-i-1;
+            }
+        }
+
+        return sortArray(gl, inp, group_size, n_groups, order);
+    }
+
+    var sortingRandom = function(gl, group_size, n_groups,  order='forward') {
+        const n = group_size*n_groups;
+
+        var inp = new Float32Array(n);
+
+        for (var i = 0; i < n; ++i){
+            inp[i] = Math.random();
+        }
+
+        return sortArray(gl, inp, group_size, n_groups, order);
+    }
+
+    function orderingSimpleEncDec(gl, group_size, n_groups) {
 
         const n = group_size*n_groups;
 
@@ -54,56 +102,52 @@
         }
     }
 
-    function sortArray(inp, n, m, order='forward'){
-        const inx = toTexture(gl, inp, n, m);
-        const bitKer = [
-            createBitonicKernel(gl, n, m, order),
-            createBitonicKernel(gl, n, m, order)
-        ];
+    function depthBasic(gl, group_size, n_groups) {
+        const n = group_size*n_groups;
+        var coords3 = new Float32Array(3*n);
+        var coords4 = new Float32Array(4*n);
         
-        let inxa = inx.toArray();
-        let result = bitonicSort(bitKer, inx, n);
+        for (var i = 0; i < n; ++i){
+            coords3[3*i+0] = Math.random();
+            coords3[3*i+1] = Math.random();
+            coords3[3*i+2] = Math.random();
+
+            coords4[4*i+0] = coords3[3*i+0];
+            coords4[4*i+1] = coords3[3*i+1];
+            coords4[4*i+2] = coords3[3*i+2];
+            coords4[4*i+3] = 0.0;
+        }
+
+        var viewMat = new Float32Array(16);
+        viewMat[4*0+0] = 1.0;
+        viewMat[4*1+1] = 1.0;
+        viewMat[4*2+2] = 2.5;
+        viewMat[4*3+3] = 1.0;
+
+        const depthKer = createDepthKernel(gl, group_size, n_groups);
+
+        let coords3x = toTexture(gl, coords3, group_size, n_groups, 'float', 3);
+        let coords4x = toTexture(gl, coords4, group_size, n_groups, 'float', 4);
+
+        let depths3 = depthKer(coords3x, viewMat);
+        let depths4 = depthKer(coords4x, viewMat);
+
+        let depths3a = depths3.toArray();
+        let depths4a = depths4.toArray();
 
         return {
-            input: inp,
-            inputTex: inx.toArray(),
-            output: result.toArray()
-        };
-    }
-
-    function sortingBasic(group_size, n_groups, order='forward') {
-        const n = group_size*n_groups;
-
-        var inp = new Float32Array(n);
-
-        for (var j = 0; j < n_groups; ++j){
-            for (var i = 0; i < group_size; ++i) {
-                inp[j*group_size + i] = (j%2==0) ? j*group_size+i : (j+1)*group_size-i-1;
-            }
+            input: coords3, 
+            output3: depths3a,
+            output4: depths4a
         }
-
-        return sortArray(inp, group_size, n_groups, order);
-    }
-    
-    function sortingRandom(group_size, n_groups, order='forward') {
-        const n = group_size*n_groups;
-
-        var inp = new Float32Array(n);
-
-        for (var i = 0; i < n; ++i){
-            inp[i] = Math.random();
-        }
-
-        return sortArray(inp, group_size, n_groups, order);
     }
 
-    function permuteBasic(group_size){
+    function permuteBasic(gl, group_size){
         const n_groups = 3;
         const n = group_size*n_groups;
 
         const permKer = createPermuteKernel(gl, group_size, n_groups);
-        const toRG32FKer = createToRG32FKernel(gl, group_size, n_groups);
-
+        
         var inp = new Float32Array(n);
         for (var j = 0; j < n_groups; ++j){
             for (var i = 0; i < group_size; ++i){
@@ -120,45 +164,162 @@
         const inpIdxx = toTexture(gl, inpIdx, 1, n_groups, 'unsigned');
 
         let y = permKer(inpx, inpIdxx);
-        let z = toRG32FKer(y);
 
         return {
             input: inp, 
             inputTex: inpx.toArray(),
-            output: z.toArray()
+            output: y.toArray()
         }
     }
 
-    function depthBasic(group_size, n_groups) {
-        const n = group_size*n_groups;
-        var coords = new Float32Array(3*n);
-        for (var i = 0; i < n; ++i){
-            coords[3*i+0] = Math.random();
-            coords[3*i+1] = Math.random();
-            coords[3*i+2] = Math.random();
-        }
 
-        var viewMat = new Float32Array(16);
-        viewMat[4*0+0] = 1.0;
-        viewMat[4*1+1] = 1.0;
-        viewMat[4*2+2] = 2.5;
-        viewMat[4*3+3] = 1.0;
+    //permuteBasic(gl, 8);
+    //depthBasic(gl, 8, 2);
 
-        const depthKer = createDepthKernel(gl, group_size, n_groups);
+    describe('Bitonic sort', () => {
+        it('Output should be sorted', () => {
+            let result1 = sortingBasic(gl, 8, 8);
 
-        let coordsx = toTexture(gl, coords, group_size, n_groups, 'float', 3);
-        let depths = depthKer(coordsx, viewMat);
+            for (var i=1; i<64; ++i)
+            {
+                expect(result1.output[i]).to.be.at.least(result1.output[i-1] + 0.5);
+            }
 
-        let depthsa = depths.toArray();
+            let result2 = sortingRandom(gl, 32, 4);
 
-        return {
-            input: coords, 
-            output: depthsa
-        }
-    }
+            for (var i=0; i<128; ++i)
+            {
+                if ((i%32)!=0){
+                    expect(result2.output[i]).to.be.at.least(result2.output[i-1]);
+                }
+            }
+        });
 
-    permuteBasic(8);
-    depthBasic(8, 2);
+        it('Output should be reverse sorted', () => {
+            let result1 = sortingBasic(gl, 8, 8, 'reverse');
+
+            for (var i=1; i<64; ++i)
+            {
+                if ((i%8)!=0){
+                    expect(result1.output[i]).to.be.at.most(result1.output[i-1] - 0.5);
+                }
+            }
+
+            let result2 = sortingRandom(gl, 32, 4, 'reverse');
+
+            for (var i=0; i<128; ++i)
+            {
+                if ((i%32)!=0){
+                    expect(result2.output[i]).to.be.at.most(result2.output[i-1]);
+                }
+            }
+        });
+
+
+    });
+
+
+    describe('Depth calculation', () => {
+        it('Depths should be calculated correctly', () => {
+            let result = depthBasic(gl, 8, 8);
+
+            for (var i=0; i<64; ++i)
+            {
+                expect(2.5*result.input[3*i+2]).to.be.closeTo(result.output3[i], 0.00001);
+                expect(2.5*result.input[3*i+2]).to.be.closeTo(result.output4[i], 0.00001);
+            }
+        });
+    });
+
+
+    describe('Group-level ordering', () => {
+
+        it('Should encode and decode ordering correctly.', () => {
+            let result8 = orderingSimpleEncDec(gl, 8, 3);
+
+            expect(result8.inputs[0]).to.equal(0);
+            expect(result8.inputTex[0]).to.equal(0);
+            expect(result8.inputEnc[0]).to.equal(0);
+            expect(result8.inputDec[0]).to.equal(0);
+
+            expect(result8.inputs[1]).to.equal(1);
+            expect(result8.inputTex[1]).to.equal(1);
+            expect(result8.inputEnc[1]).to.closeTo(1.0000001, 0.0000002);
+            expect(result8.inputDec[1]).to.equal(1);
+            
+            expect(result8.inputs[2]).to.equal(2);
+            expect(result8.inputTex[2]).to.equal(2);
+            expect(result8.inputEnc[2]).to.closeTo(2.0000005, 0.000001);
+            expect(result8.inputDec[2]).to.equal(2);
+
+            expect(result8.inputs[7]).to.equal(7);
+            expect(result8.inputTex[7]).to.equal(7);
+            expect(result8.inputEnc[7]).to.closeTo(7.0000033, 0.000007);
+            expect(result8.inputDec[7]).to.equal(7);
+
+            expect(result8.inputs[8]).to.equal(8);
+            expect(result8.inputTex[8]).to.equal(8);
+            expect(result8.inputEnc[8]).to.equal(8);
+            expect(result8.inputDec[8]).to.equal(0);
+
+            expect(result8.inputs[17]).to.equal(17);
+            expect(result8.inputTex[17]).to.equal(17);
+            expect(result8.inputEnc[17]).to.closeTo(17.000002, 0.000005);
+            expect(result8.inputDec[17]).to.equal(1);
+
+            let result32 = orderingSimpleEncDec(gl, 32, 2);
+
+            expect(result32.inputs[0]).to.equal(0);
+            expect(result32.inputTex[0]).to.equal(0);
+            expect(result32.inputEnc[0]).to.equal(0);
+            expect(result32.inputDec[0]).to.equal(0);
+
+            expect(result32.inputs[1]).to.equal(1);
+            expect(result32.inputTex[1]).to.equal(1);
+            expect(result32.inputEnc[1]).to.closeTo(1.0000001, 0.0000002);
+            expect(result32.inputDec[1]).to.equal(1);
+            
+            expect(result32.inputs[2]).to.equal(2);
+            expect(result32.inputTex[2]).to.equal(2);
+            expect(result32.inputEnc[2]).to.closeTo(2.0000005, 0.000001);
+            expect(result32.inputDec[2]).to.equal(2);
+
+            expect(result32.inputs[31]).to.equal(31);
+            expect(result32.inputTex[31]).to.equal(31);
+            expect(result32.inputEnc[31]).to.closeTo(31.00006, 0.0001);
+            expect(result32.inputDec[31]).to.equal(31);
+
+            expect(result32.inputs[32]).to.equal(32);
+            expect(result32.inputTex[32]).to.equal(32);
+            expect(result32.inputEnc[32]).to.equal(32);
+            expect(result32.inputDec[32]).to.equal(0);
+
+            expect(result32.inputs[33]).to.equal(33);
+            expect(result32.inputTex[33]).to.equal(33);
+            expect(result32.inputEnc[33]).to.closeTo(33.000004, 0.00001);
+            expect(result32.inputDec[33]).to.equal(1);
+        });
+    });
+
+    describe('Permute groups', () => {
+
+        it('Groups should be permuted', async() => {
+            let result = permuteBasic(gl, 8);
+
+            var i;
+            for(i=0; i<8; ++i){
+                expect(result.output[i]).to.equal(i+16);
+            }
+            for(i=0; i<8; ++i){
+                expect(result.output[i+8]).to.equal(i);
+            }
+            for(i=0; i<8; ++i){
+                expect(result.output[i+16]).to.equal(15-i);
+            }
+        });
+    });
+
+    window.addEventListener('load', function() {     mocha.run();   })
 </script>
 
 </html>
