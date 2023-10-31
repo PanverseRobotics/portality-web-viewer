@@ -10,10 +10,6 @@
   },
   "dependencies": {
     "chai": "^4.3.10",
-    "mocha": "^10.2.0",
-    "puppeteer": "^21.4.0"
-  },
-  "devDependencies": {
-    "gpu.js": "^2.16.0"
+    "mocha": "^10.2.0"
   }
 }
