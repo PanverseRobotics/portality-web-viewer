@@ -50,22 +50,47 @@
         return gl;
     }
 
+    // Standard Normal variate using Box-Muller transform.
+    function gaussianRandom(mean=0, stdev=1) {
+        const u = 1 - Math.random(); // Converting [0,1) to (0,1]
+        const v = Math.random();
+        const z = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+        // Transform to the desired mean and standard deviation:
+        return z * stdev + mean;
+    }
+
+    function randomCovariance(scale){
+        let a  = new Float32Array(9);
+        let at = new Float32Array(9);
+        let s  = new Float32Array(9);
+
+        for(var i=0; i<9; ++i){
+            a[i] = gaussianRandom(0, scale);
+        }
+
+        mat3transpose(at, a);
+        mat3multiply(s, at, a);
+
+        return s;
+    }
+
     function main() {
         let canvas = initCanvas();
         let gl = initWebgl(canvas);
 
         let shaderProgram = createRenderProgram(gl);
 
-
         // Create objects
         var GROUP_SIZE = 64;
-        var N_GROUPS = 256;
+        var N_GROUPS = 512;
         var NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
         var PARTICLE_SIZE = 10.0;
         var particles = new Array(NUM_PARTICLES);
 
         var positionData = new Float32Array(NUM_PARTICLES * 3);
         var colorData = new Float32Array(NUM_PARTICLES * 4);
+        var covDiagData  = new Float32Array(NUM_PARTICLES * 3);
+        var covUpperData = new Float32Array(NUM_PARTICLES * 3);
 
         for (var i = 0; i < NUM_PARTICLES; ++i) {
             var x = (Math.random() - 0.5);
@@ -85,12 +110,18 @@
             }
 
             colorData.set(col, i * 4);
+
+            let s = randomCovariance(5e-3);
+            covDiagData.set([s[3*0+0], s[3*1+1], s[3*2+2]], i * 3);
+            covUpperData.set([s[3*1+0], s[3*2+0], s[3*2+1]], i * 3);
         }
 
 
         // Create buffers for the particle positions and colors.
         var positionBuffer = gl.createBuffer();
         var colorBuffer = gl.createBuffer();
+        var covDiagBuffer = gl.createBuffer();
+        var covUpperBuffer = gl.createBuffer();
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -121,6 +152,33 @@
 
         let elementArrayData = new Uint32Array(NUM_PARTICLES);
 
+        // Set buffers -----------------------------------------------------
+        // Bind vertex position and color data.
+        // We ideally want to avoid having to do this each step.
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
+        var positionLoc = gl.getAttribLocation(shaderProgram, "position");
+        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(positionLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
+        var colorLoc = gl.getAttribLocation(shaderProgram, "color");
+        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(colorLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, covDiagBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, covDiagData, gl.DYNAMIC_COPY);
+        var covDiagLoc = gl.getAttribLocation(shaderProgram, "covDiag");
+        gl.vertexAttribPointer(covDiagLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(covDiagLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, covUpperBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, covUpperData, gl.DYNAMIC_COPY);
+        var covUpperLoc = gl.getAttribLocation(shaderProgram, "covUpper");
+        gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(covUpperLoc);
+
         image.onload = function() {
             var rotationMatrix = new Float32Array(16);
 
@@ -133,7 +191,7 @@
                 angl += 0.02;
             
                 mat4perspective(projMatrix, Math.PI / 2, canvas.width / canvas.height, 0.1, 10.0);
-                eyePosition = [1.8*Math.sin(angl), 0.3, 1.8*Math.cos(angl)];
+                eyePosition = [1.4*Math.sin(angl), 0.3, 1.4*Math.cos(angl)];
                 mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, 1, 0]);
                 mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
@@ -142,23 +200,10 @@
 
                 // Set scene transform uniforms.
                 gl.useProgram(shaderProgram);
+                gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, viewProjMatrix);
                 gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), eyePosition);
                 gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
-
-                // Bind vertex position and color data.
-                // It would be great to avoid having to do this each step.
-                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
-                var positionLoc = gl.getAttribLocation(shaderProgram, "position");
-                gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-                gl.enableVertexAttribArray(positionLoc);
-
-                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
-                var colorLoc = gl.getAttribLocation(shaderProgram, "color");
-                gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
-                gl.enableVertexAttribArray(colorLoc);
 
                 // Set element array buffer to data from sorting pipeline.
                 elementArrayData.set(idxPerm.toArray());
