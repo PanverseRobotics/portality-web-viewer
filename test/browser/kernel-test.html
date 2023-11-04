@@ -142,11 +142,11 @@
         }
     }
 
-    function permuteBasic(gl, group_size){
+    function permuteBasic(gl, group_size, unpack){
         const n_groups = 3;
         const n = group_size*n_groups;
 
-        const permKer = createPermuteKernel(gl, group_size, n_groups);
+        const permKer = createPermuteKernel(gl, group_size, n_groups, unpack);
         
         var inp = new Float32Array(n);
         for (var j = 0; j < n_groups; ++j){
@@ -171,7 +171,6 @@
             output: y.toArray()
         }
     }
-
 
     //permuteBasic(gl, 8);
     //depthBasic(gl, 8, 2);
@@ -304,7 +303,22 @@
     describe('Permute groups', () => {
 
         it('Groups should be permuted', async() => {
-            let result = permuteBasic(gl, 8);
+            let result = permuteBasic(gl, 8, false);
+
+            var i;
+            for(i=0; i<8; ++i){
+                expect(result.output[i]).to.equal(i+16);
+            }
+            for(i=0; i<8; ++i){
+                expect(result.output[i+8]).to.equal(i);
+            }
+            for(i=0; i<8; ++i){
+                expect(result.output[i+16]).to.equal(15-i);
+            }
+        });
+
+        it('Groups should be permuted when using rgba8 unpacking', async() => {
+            let result = permuteBasic(gl, 8, true);
 
             var i;
             for(i=0; i<8; ++i){
