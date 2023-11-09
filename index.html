@@ -12,20 +12,34 @@
 <body>
     <h1>Rendering test page.</h1>
     <p>Page containing basic rendering test.</p>
-    <canvas id="gl-canvas" width="768" height="768"></canvas>
+    <div> fps: <span id="fps"></span></div>
+    <div>average fps: <span id="avg"></span></div>
+    <canvas id="gl-canvas" width="1024" height="1024"></canvas>
 </body>
 
 <script type="module">
-    const canvasWidth = 768;
-    const canvasHeight = 768;
+    const canvasWidth = 1024;
+    const canvasHeight = 1024;
 
-    import { mat3transpose, mat3multiply,  mat4multiply, mat4perspective, mat4lookAt } from '../lib/utils/linalg.js';
+    import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from '../lib/utils/linalg.js';
     import { rotorToRotationMatrix, rotorsToCov3D } from '../lib/utils/rotors.js';
     import { createPipeline, applyPipeline } from '../lib/pipeline.js';
     import { permuteArray } from '../lib/pointarray.js';
     import loadSplatFile from '../lib/splatfile.js';
 
-    function initCanvas(){
+    const fpsElem = document.querySelector("#fps");
+    const avgElem = document.querySelector("#avg");
+
+    let fpsData = {
+        then: 0,
+        frameTimes: [],
+        frameCursor: 0,
+        numFrames: 0,
+        maxFrames: 20,
+        totalFPS: 0
+    };
+
+    function initCanvas() {
         var canvas = document.getElementById("gl-canvas");
         //canvas.width = window.innerWidth;
         //canvas.height = window.innerHeight;
@@ -33,7 +47,7 @@
         return canvas;
     }
 
-    function initWebgl(canvas){
+    function initWebgl(canvas) {
         var gl = canvas.getContext("webgl2");
 
         if (!gl) {
@@ -54,28 +68,29 @@
         return gl;
     }
 
-    // Standard Normal variate using Box-Muller transform.
-    function gaussianRandom(mean=0, stdev=1) {
-        const u = 1 - Math.random(); // Converting [0,1) to (0,1]
-        const v = Math.random();
-        const z = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
-        // Transform to the desired mean and standard deviation:
-        return z * stdev + mean;
+    function updateFPSDisplay(fps, averageFPS) {
+        fpsElem.textContent = fps.toFixed(1);  // update fps display
+        avgElem.textContent = averageFPS.toFixed(1);  // update avg display
     }
 
-    function randomCovariance(scale){
-        let a  = new Float32Array(9);
-        let at = new Float32Array(9);
-        let s  = new Float32Array(9);
+    function calcFPS(now) {
+        const deltaTime = now - fpsData.then;
+        fpsData.then = now;
+        const fps = 1000 / deltaTime;
 
-        for(var i=0; i<9; ++i){
-            a[i] = gaussianRandom(0, scale);
-        }
+        // add the current fps and remove the oldest fps
+        fpsData.totalFPS += fps - (fpsData.frameTimes[fpsData.frameCursor] || 0);
 
-        mat3transpose(at, a);
-        mat3multiply(s, at, a);
+        // record the newest fps
+        fpsData.frameTimes[fpsData.frameCursor++] = fps;
 
-        return s;
+        // needed so the first N frames, before we have maxFrames, is correct.
+        fpsData.numFrames = Math.max(fpsData.numFrames, fpsData.frameCursor);
+
+        // wrap the cursor
+        fpsData.frameCursor %= fpsData.maxFrames;
+
+        updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
     }
 
     function renderMain(data) {
@@ -87,8 +102,8 @@
         // Create objects
         var GROUP_SIZE = 256;
         var N_GROUPS = 2048;
-        
-        var NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
+
+        var NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
         var SORT_INTERVAL = 4;
 
         let positionData = data.positions;
@@ -106,11 +121,10 @@
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-
-        var projMatrix = new Float32Array(16); 
+        var projMatrix = new Float32Array(16);
         var viewMatrix = new Float32Array(16);
         var eyePosition = [0, 0, 2];
-        var viewProjMatrix = new Float32Array(16); 
+        var viewProjMatrix = new Float32Array(16);
 
         var viewportScale = new Float32Array([canvas.width, canvas.height]);
 
@@ -162,26 +176,27 @@
         gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(covUpperLoc);
 
-        image.onload = function() {
+        image.onload = function () {
             var rotationMatrix = new Float32Array(16);
 
-            var angl = 0.0; 
-            var i=0;
-            function draw() {
+            var angl = 0.0;
+            var i = 0;
+
+            function draw(now) {
                 // Set scene transforms.
                 angl += 0.01;
-            
+
                 mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-                eyePosition = [5.0*Math.sin(angl), 0.0, 5.0*Math.cos(angl)];
+                eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
                 mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, -1, 0]);
                 mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
                 // apply sorting pipeline.
                 let idxPerm;
-                if(i%SORT_INTERVAL==0){
-                    idxPerm = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix); 
+                if (i % SORT_INTERVAL == 0) {
+                    idxPerm = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
                 }
-                
+
                 // Set scene transform uniforms.
                 gl.useProgram(shaderProgram);
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
@@ -190,7 +205,7 @@
                 gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
                 // Set element array buffer to data from sorting pipeline.
-                if(i%SORT_INTERVAL==0){
+                if (i % SORT_INTERVAL == 0) {
                     elementArrayData.set(idxPerm.toArray());
                     gl.bufferData(
                         gl.ELEMENT_ARRAY_BUFFER,
@@ -199,13 +214,13 @@
                     );
                     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
                 }
-                i=i+1;
+                i = i + 1;
 
                 // Set viewport params.
                 gl.viewport(0, 0, canvasWidth, canvasHeight);
                 gl.enable(gl.SCISSOR_TEST);
                 gl.scissor(0, 0, canvasWidth, canvasHeight);
-                gl.bindFramebuffer(gl.FRAMEBUFFER, null); 
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
                 // Prepare viewport for rendering and blending.
                 gl.clear(gl.COLOR_BUFFER_BIT);
@@ -213,25 +228,27 @@
                 gl.disable(gl.DEPTH_TEST);
                 gl.enable(gl.BLEND);
                 gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);                //gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
-                
+
                 // Draw all the vertices as points, in the order given in the element array buffer.
-                gl.drawElements(gl.POINTS, NUM_PARTICLES, gl.UNSIGNED_INT, 0);     
+                gl.drawElements(gl.POINTS, NUM_PARTICLES, gl.UNSIGNED_INT, 0);
 
                 // Reset values of variables so that other shaders can run.
                 gl.enable(gl.DEPTH_TEST);
                 gl.disable(gl.BLEND);
 
+                calcFPS(now);
+
                 requestAnimationFrame(draw);
             }
 
             requestAnimationFrame(draw);
-            
+
         }
 
         image.src = "img/house.png";
     }
 
-    function main(){
+    function main() {
         loadSplatFile('http://localhost:8080/train.splat', renderMain);
     }
 
