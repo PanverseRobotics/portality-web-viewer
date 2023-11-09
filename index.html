@@ -3,8 +3,9 @@
 
 <head>
     <title>Test page.</title>
-    <script src="./lib/utils/linalg.js"></script>
+    <script src="./lib/utils/linalg.js" type="module"></script>
     <script src="../../lib/pipeline.js" type="module"></script>
+    <script src="../../lib/plyfile.js" type="module"></script>
     <script src="./lib/rendering/shaders.js"></script>
 </head>
 
@@ -18,8 +19,11 @@
     const canvasWidth = 768;
     const canvasHeight = 768;
 
+    import { mat3transpose, mat3multiply,  mat4multiply, mat4perspective, mat4lookAt } from '../lib/utils/linalg.js';
+    import { rotorToRotationMatrix, rotorsToCov3D } from '../lib/utils/rotors.js';
     import { createPipeline, applyPipeline } from '../lib/pipeline.js';
     import { permuteArray } from '../lib/pointarray.js';
+    import loadSplatFile from '../lib/splatfile.js';
 
     function initCanvas(){
         var canvas = document.getElementById("gl-canvas");
@@ -74,48 +78,25 @@
         return s;
     }
 
-    function main() {
+    function renderMain(data) {
         let canvas = initCanvas();
         let gl = initWebgl(canvas);
 
         let shaderProgram = createRenderProgram(gl);
 
         // Create objects
-        var GROUP_SIZE = 64;
-        var N_GROUPS = 512;
+        var GROUP_SIZE = 256;
+        var N_GROUPS = 2048;
+        
         var NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
-        var PARTICLE_SIZE = 10.0;
-        var particles = new Array(NUM_PARTICLES);
+        var SORT_INTERVAL = 4;
 
-        var positionData = new Float32Array(NUM_PARTICLES * 3);
-        var colorData = new Float32Array(NUM_PARTICLES * 4);
-        var covDiagData  = new Float32Array(NUM_PARTICLES * 3);
-        var covUpperData = new Float32Array(NUM_PARTICLES * 3);
+        let positionData = data.positions;
+        let colorData = data.colors;
 
-        for (var i = 0; i < NUM_PARTICLES; ++i) {
-            var x = (Math.random() - 0.5);
-            var y = (Math.random() - 0.5);
-            var z = (Math.random() - 0.5);
-            particles[i] = {
-                scale: [1.0, 1.0, 1.0],
-                rotate: [0, 0, 0], // Will be used for global rotation
-                translate: [x, y, z],
-            };
-
-            positionData.set([x, y, z], i * 3);
-
-            var col = [Math.random(), 0.1, 0.3, 1.0];
-            if (z < 0){
-                col = [0.1, 0.1, 0.9, 1.0];
-            }
-
-            colorData.set(col, i * 4);
-
-            let s = randomCovariance(5e-3);
-            covDiagData.set([s[3*0+0], s[3*1+1], s[3*2+2]], i * 3);
-            covUpperData.set([s[3*1+0], s[3*2+0], s[3*2+1]], i * 3);
-        }
-
+        let covData = rotorsToCov3D(data.scales, data.rotors);
+        let covDiagData = covData.diag;
+        let covUpperData = covData.upper;
 
         // Create buffers for the particle positions and colors.
         var positionBuffer = gl.createBuffer();
@@ -149,6 +130,8 @@
         let pipeline = createPipeline(gl, positionData, N_GROUPS, GROUP_SIZE);
         positionData = permuteArray(positionData, pipeline.perm, 3);
         colorData = permuteArray(colorData, pipeline.perm, 4);
+        covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
+        covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
 
         let elementArrayData = new Uint32Array(NUM_PARTICLES);
 
@@ -183,21 +166,22 @@
             var rotationMatrix = new Float32Array(16);
 
             var angl = 0.0; 
-
+            var i=0;
             function draw() {
-                i=i+1;
-
                 // Set scene transforms.
-                angl += 0.02;
+                angl += 0.01;
             
-                mat4perspective(projMatrix, Math.PI / 2, canvas.width / canvas.height, 0.1, 10.0);
-                eyePosition = [1.4*Math.sin(angl), 0.3, 1.4*Math.cos(angl)];
-                mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, 1, 0]);
+                mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
+                eyePosition = [5.0*Math.sin(angl), 0.0, 5.0*Math.cos(angl)];
+                mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, -1, 0]);
                 mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
                 // apply sorting pipeline.
-                let idxPerm = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix); 
-
+                let idxPerm;
+                if(i%SORT_INTERVAL==0){
+                    idxPerm = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix); 
+                }
+                
                 // Set scene transform uniforms.
                 gl.useProgram(shaderProgram);
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
@@ -206,13 +190,16 @@
                 gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
                 // Set element array buffer to data from sorting pipeline.
-                elementArrayData.set(idxPerm.toArray());
-                gl.bufferData(
-                    gl.ELEMENT_ARRAY_BUFFER,
-                    elementArrayData,
-                    gl.DYNAMIC_DRAW
-                );
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+                if(i%SORT_INTERVAL==0){
+                    elementArrayData.set(idxPerm.toArray());
+                    gl.bufferData(
+                        gl.ELEMENT_ARRAY_BUFFER,
+                        elementArrayData,
+                        gl.DYNAMIC_DRAW
+                    );
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+                }
+                i=i+1;
 
                 // Set viewport params.
                 gl.viewport(0, 0, canvasWidth, canvasHeight);
@@ -243,6 +230,11 @@
 
         image.src = "img/house.png";
     }
+
+    function main(){
+        loadSplatFile('http://localhost:8080/train.splat', renderMain);
+    }
+
 
     main();
 

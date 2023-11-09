@@ -1,7 +1,8 @@
 import fs from 'fs'
 import { Buffer } from 'buffer'
 import { expect } from 'chai'
-import { loadSplatData, rotorsToCov3D } from '../lib/splatfile.js';
+import { loadSplatData } from '../lib/splatfile.js';
+import { rotorsToCov3D } from '../lib/utils/rotors.js'
 
 describe("Splat File", function () {
     it("should load the splat file and parse it correctly", function () {
