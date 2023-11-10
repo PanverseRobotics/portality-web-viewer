@@ -99,11 +99,11 @@
         let shaderProgram = createRenderProgram(gl);
 
         // Create objects
-        var GROUP_SIZE = 256;
-        var N_GROUPS = 2048;
+        const GROUP_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        const N_GROUPS = Math.ceil(Math.ceil(data.positions.length / 3) / GROUP_SIZE);
 
-        var NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
-        var SORT_INTERVAL = 4;
+        const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
+        const SORT_INTERVAL = 4;
 
         let positionData = data.positions;
         let colorData = data.colors;
