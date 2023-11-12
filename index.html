@@ -100,9 +100,9 @@
 
         // Create objects
         const GROUP_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-        const N_GROUPS = Math.ceil(Math.ceil(data.positions.length / 3) / GROUP_SIZE);
+        const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
+        const NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
 
-        const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
         const SORT_INTERVAL = 4;
 
         let positionData = data.positions;
@@ -140,7 +140,7 @@
             gl.STATIC_DRAW
         );
 
-        let pipeline = createPipeline(gl, positionData, N_GROUPS, GROUP_SIZE);
+        let pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
         positionData = permuteArray(positionData, pipeline.perm, 3);
         colorData = permuteArray(colorData, pipeline.perm, 4);
         covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
