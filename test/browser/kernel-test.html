@@ -148,7 +148,7 @@
 
         const permKer = createPermuteKernel(gl, group_size, n_groups, unpack);
         
-        var inp = new Float32Array(n);
+        var inp = new Uint32Array(n);
         for (var j = 0; j < n_groups; ++j){
             for (var i = 0; i < group_size; ++i){
                 inp[j*group_size + i] = j==1 ? group_size-i-1 : i;
@@ -160,7 +160,7 @@
         inpIdx[1] = 0;
         inpIdx[2] = 1;
         
-        const inpx = toTexture(gl, inp, group_size, n_groups);
+        const inpx = toTexture(gl, inp, group_size, n_groups, 'unsigned');
         const inpIdxx = toTexture(gl, inpIdx, 1, n_groups, 'unsigned');
 
         let y = permKer(inpx, inpIdxx);
@@ -168,7 +168,7 @@
         return {
             input: inp, 
             inputTex: inpx.toArray(),
-            output: y.toArray()
+            output:y.toArray()
         }
     }
 
@@ -305,6 +305,10 @@
         it('Groups should be permuted', async() => {
             let result = permuteBasic(gl, 8, false);
 
+            expect(result.output[0]).to.equal(16);
+            expect(result.output[8]).to.equal(0);
+            expect(result.output[16]).to.equal(15);
+            
             var i;
             for(i=0; i<8; ++i){
                 expect(result.output[i]).to.equal(i+16);
@@ -319,6 +323,10 @@
 
         it('Groups should be permuted when using rgba8 unpacking', async() => {
             let result = permuteBasic(gl, 8, true);
+
+            expect(result.output[0]).to.equal(16);
+            expect(result.output[8]).to.equal(0);
+            expect(result.output[16]).to.equal(15);
 
             var i;
             for(i=0; i<8; ++i){
