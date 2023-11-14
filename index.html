@@ -5,7 +5,7 @@
     <title>Test page.</title>
     <script src="./lib/utils/linalg.js" type="module"></script>
     <script src="../../lib/pipeline.js" type="module"></script>
-    <script src="./lib/rendering/shaders.js"></script>
+    <script src="./lib/rendering/vpshaders.js"></script>
 </head>
 
 <body>
@@ -22,7 +22,7 @@
 
     import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from '../lib/utils/linalg.js';
     import { rotorToRotationMatrix, rotorsToCov3D } from '../lib/utils/rotors.js';
-    import { createPipeline, applyPipeline } from '../lib/pipeline.js';
+    import { createPipeline, applyPipeline, toTexture } from '../lib/pipeline.js';
     import { permuteArray } from '../lib/pointarray.js';
     import loadSplatFile from '../lib/splatfile.js';
 
@@ -92,6 +92,81 @@
         updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
     }
 
+    function setBuffers(gl, positionData, colorData, covDiagData, covUpperData){
+        // Create buffers for the particle positions and colors.
+        var positionBuffer = gl.createBuffer();
+        var colorBuffer = gl.createBuffer();
+        var covDiagBuffer = gl.createBuffer();
+        var covUpperBuffer = gl.createBuffer();
+
+        // Set buffers -----------------------------------------------------
+        // Bind vertex position and color data.
+        // We ideally want to avoid having to do this each step.
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
+        var positionLoc = gl.getAttribLocation(shaderProgram, "position");
+        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(positionLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
+        var colorLoc = gl.getAttribLocation(shaderProgram, "color");
+        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(colorLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, covDiagBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, covDiagData, gl.DYNAMIC_COPY);
+        var covDiagLoc = gl.getAttribLocation(shaderProgram, "covDiag");
+        gl.vertexAttribPointer(covDiagLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(covDiagLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, covUpperBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, covUpperData, gl.DYNAMIC_COPY);
+        var covUpperLoc = gl.getAttribLocation(shaderProgram, "covUpper");
+        gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(covUpperLoc);
+    }
+
+    function makeTextures(gl, position, color, covUpper, covDiag, group_size, n_groups){
+        return {
+            position: toTexture(gl, position, group_size, n_groups, 'float', 3),
+            color: toTexture(gl, color, group_size, n_groups, 'float', 4),
+            covDiag: toTexture(gl, covDiag, group_size, n_groups, 'float', 3),
+            covUpper: toTexture(gl, covUpper, group_size, n_groups, 'float', 3)
+        }
+    }
+
+    function setTextures(gl, program, permTextures, vertexTextures){
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.inner.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        const permInnerIdxLoc = gl.getUniformLocation(program, 'perm_inner_idx');
+        gl.uniform1i(permInnerIdxLoc, 0);
+
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, vertexTextures.position.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'positionTexture'), 3);
+
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, vertexTextures.color.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'colorTexture'), 4);
+
+        gl.activeTexture(gl.TEXTURE5);
+        gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covDiag.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'covDiagTexture'), 5); 
+
+        gl.activeTexture(gl.TEXTURE6);
+        gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covUpper.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'covUpperTexture'), 6); 
+    }
+
     function renderMain(data) {
         let canvas = initCanvas();
         let gl = initWebgl(canvas);
@@ -99,11 +174,11 @@
         let shaderProgram = createRenderProgram(gl);
 
         // Create objects
-        const GROUP_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        const GROUP_SIZE = 4096; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
         const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
         const NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
 
-        const SORT_INTERVAL = 4;
+        const SORT_INTERVAL = 1;
 
         let positionData = data.positions;
         let colorData = data.colors;
@@ -111,12 +186,6 @@
         let covData = rotorsToCov3D(data.scales, data.rotors);
         let covDiagData = covData.diag;
         let covUpperData = covData.upper;
-
-        // Create buffers for the particle positions and colors.
-        var positionBuffer = gl.createBuffer();
-        var colorBuffer = gl.createBuffer();
-        var covDiagBuffer = gl.createBuffer();
-        var covUpperBuffer = gl.createBuffer();
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -146,34 +215,7 @@
         covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
         covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
 
-        let elementArrayData = new Uint32Array(NUM_PARTICLES);
-
-        // Set buffers -----------------------------------------------------
-        // Bind vertex position and color data.
-        // We ideally want to avoid having to do this each step.
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
-        var positionLoc = gl.getAttribLocation(shaderProgram, "position");
-        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(positionLoc);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
-        var colorLoc = gl.getAttribLocation(shaderProgram, "color");
-        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(colorLoc);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, covDiagBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, covDiagData, gl.DYNAMIC_COPY);
-        var covDiagLoc = gl.getAttribLocation(shaderProgram, "covDiag");
-        gl.vertexAttribPointer(covDiagLoc, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(covDiagLoc);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, covUpperBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, covUpperData, gl.DYNAMIC_COPY);
-        var covUpperLoc = gl.getAttribLocation(shaderProgram, "covUpper");
-        gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(covUpperLoc);
+        let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
 
         image.onload = function () {
             var rotationMatrix = new Float32Array(16);
@@ -191,9 +233,9 @@
                 mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
                 // apply sorting pipeline.
-                let idxPerm;
+                let permTextures;
                 if (i % SORT_INTERVAL == 0) {
-                    idxPerm = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
+                    permTextures = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
                 }
 
                 // Set scene transform uniforms.
@@ -203,22 +245,15 @@
                 gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), eyePosition);
                 gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
-                // Set element array buffer to data from sorting pipeline.
-                if (i % SORT_INTERVAL == 0) {
-                    elementArrayData.set(idxPerm.toArray());
-                    gl.bufferData(
-                        gl.ELEMENT_ARRAY_BUFFER,
-                        elementArrayData,
-                        gl.DYNAMIC_DRAW
-                    );
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-                }
-                i = i + 1;
-
                 // Set viewport params.
                 gl.viewport(0, 0, canvasWidth, canvasHeight);
                 gl.enable(gl.SCISSOR_TEST);
                 gl.scissor(0, 0, canvasWidth, canvasHeight);
+
+
+                setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
+                gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
+
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
                 // Prepare viewport for rendering and blending.
@@ -229,7 +264,7 @@
                 gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);                //gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
 
                 // Draw all the vertices as points, in the order given in the element array buffer.
-                gl.drawElements(gl.POINTS, NUM_PARTICLES, gl.UNSIGNED_INT, 0);
+                gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
 
                 // Reset values of variables so that other shaders can run.
                 gl.enable(gl.DEPTH_TEST);
@@ -248,7 +283,7 @@
     }
 
     function main() {
-        loadSplatFile('./train.splat', renderMain);
+        loadSplatFile('./bicycle.splat', renderMain);
     }
 
 
