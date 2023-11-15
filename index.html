@@ -174,7 +174,7 @@
         let shaderProgram = createRenderProgram(gl);
 
         // Create objects
-        const GROUP_SIZE = 4096; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
         const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
         const NUM_PARTICLES = GROUP_SIZE*N_GROUPS;
 
