@@ -14,8 +14,6 @@ import loadSplatFile from './lib/splatfile.js';
 const canvasWidth = 1024;
 const canvasHeight = 1024;
 
-const fpsElem = document.querySelector("#fps");
-const avgElem = document.querySelector("#avg");
 
 let fpsData = {
     then: 0,
@@ -56,6 +54,8 @@ function initWebgl(canvas) {
 }
 
 function updateFPSDisplay(fps, averageFPS) {
+    const fpsElem = document.querySelector("#fps");
+    const avgElem = document.querySelector("#avg");
     fpsElem.textContent = fps.toFixed(1);  // update fps display
     avgElem.textContent = averageFPS.toFixed(1);  // update avg display
 }
@@ -260,7 +260,7 @@ function renderMain(data) {
             gl.enable(gl.DEPTH_TEST);
             gl.disable(gl.BLEND);
 
-            //calcFPS(now);
+            calcFPS(now);
 
             requestAnimationFrame(draw);
         }
@@ -272,10 +272,10 @@ function renderMain(data) {
     image.src = "img/house.png";
 }
 
-function main() {
+function bicycleMain() {
     loadSplatFile('./bicycle.splat', renderMain);
 }
 
 
-export { renderMain, loadSplatFile };
+export { renderMain, loadSplatFile, bicycleMain };
 
