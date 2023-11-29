@@ -5,7 +5,7 @@
     <title>Test page.</title>
     <script src="./lib/utils/linalg.js" type="module"></script>
     <script src="../../lib/pipeline.js" type="module"></script>
-    <script src="./lib/rendering/vpshaders.js"></script>
+    <script src="./lib/rendering/vpshaders.js" type="module"></script>
 </head>
 
 <body>
@@ -25,6 +25,7 @@
     import { createPipeline, applyPipeline, toTexture } from '../lib/pipeline.js';
     import { permuteArray } from '../lib/pointarray.js';
     import loadSplatFile from '../lib/splatfile.js';
+    import createRenderProgram from '../lib/rendering/vpshaders.js';
 
     const fpsElem = document.querySelector("#fps");
     const avgElem = document.querySelector("#avg");
