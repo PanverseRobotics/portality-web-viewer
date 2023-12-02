@@ -207,67 +207,67 @@ function renderMain(data) {
 
     let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
 
-    image.onload = function () {
-        var rotationMatrix = new Float32Array(16);
+    //image.onload = function () {
+    var rotationMatrix = new Float32Array(16);
 
-        var angl = 0.0;
-        var i = 0;
+    var angl = 0.0;
+    var i = 0;
 
-        function draw(now) {
-            // Set scene transforms.
-            angl += 0.01;
+    function draw(now) {
+        // Set scene transforms.
+        angl += 0.01;
 
-            mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-            eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
-            mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, -1, 0]);
-            mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
+        mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
+        eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
+        mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, -1, 0]);
+        mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
-            // apply sorting pipeline.
-            let permTextures;
-            if (i % SORT_INTERVAL == 0) {
-                permTextures = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
-            }
-
-            // Set scene transform uniforms.
-            gl.useProgram(shaderProgram);
-            gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
-            gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, viewProjMatrix);
-            gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), eyePosition);
-            gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
-
-            // Set viewport params.
-            gl.viewport(0, 0, canvasWidth, canvasHeight);
-            gl.enable(gl.SCISSOR_TEST);
-            gl.scissor(0, 0, canvasWidth, canvasHeight);
-
-
-            setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
-            gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            // Prepare viewport for rendering and blending.
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.clear(gl.DEPTH_BUFFER_BIT);
-            gl.disable(gl.DEPTH_TEST);
-            gl.enable(gl.BLEND);
-            gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);                //gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
-
-            // Draw all the vertices as points, in the order given in the element array buffer.
-            gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
-
-            // Reset values of variables so that other shaders can run.
-            gl.enable(gl.DEPTH_TEST);
-            gl.disable(gl.BLEND);
-
-            calcFPS(now);
-
-            requestAnimationFrame(draw);
+        // apply sorting pipeline.
+        let permTextures;
+        if (i % SORT_INTERVAL == 0) {
+            permTextures = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
         }
 
-        requestAnimationFrame(draw);
+        // Set scene transform uniforms.
+        gl.useProgram(shaderProgram);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, viewProjMatrix);
+        gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), eyePosition);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
+        // Set viewport params.
+        gl.viewport(0, 0, canvasWidth, canvasHeight);
+        gl.enable(gl.SCISSOR_TEST);
+        gl.scissor(0, 0, canvasWidth, canvasHeight);
+
+
+        setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
+        gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // Prepare viewport for rendering and blending.
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.disable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);                //gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
+
+        // Draw all the vertices as points, in the order given in the element array buffer.
+        gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
+
+        // Reset values of variables so that other shaders can run.
+        gl.enable(gl.DEPTH_TEST);
+        gl.disable(gl.BLEND);
+
+        calcFPS(now);
+
+        requestAnimationFrame(draw);
     }
+
+    requestAnimationFrame(draw);
+
+    //}
 
     image.src = "img/house.png";
 }
