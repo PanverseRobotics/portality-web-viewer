@@ -1,6 +1,5 @@
 import './lib/utils/linalg.js';
 import './lib/pipeline.js';
-import { createRenderProgram } from './lib/rendering/vpshaders.js';
 
 
 
@@ -10,6 +9,9 @@ import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import loadSplatFile from './lib/splatfile.js';
+import createRenderProgram from './lib/rendering/vpshaders.js';
+
+
 
 const canvasWidth = 1024;
 const canvasHeight = 1024;
@@ -55,8 +57,10 @@ function initWebgl(canvas) {
 
 function updateFPSDisplay(fps, averageFPS) {
     const fpsElem = document.querySelector("#fps");
-    const avgElem = document.querySelector("#avg");
+    if (!fpsElem) return;
     fpsElem.textContent = fps.toFixed(1);  // update fps display
+    const avgElem = document.querySelector("#avg");
+    if (!avgElem) return;
     avgElem.textContent = averageFPS.toFixed(1);  // update avg display
 }
 
@@ -167,6 +171,7 @@ function renderMain(data) {
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
     const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
+    // const NUM_PARTICLES = 2048000; // for testing only
 
     const SORT_INTERVAL = 1;
 
@@ -206,20 +211,38 @@ function renderMain(data) {
     covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
 
     let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
+    var animationFrameId;
 
-    //image.onload = function () {
     var rotationMatrix = new Float32Array(16);
 
     var angl = 0.0;
     var i = 0;
+    let isMouseDown = false;
+    let lastMousePosition = [0, 0];
+    var eyePosition = [5, 0, 0]
+    var focusPosition = [0, 0, 0]
+    var azimuth = 0.0;
+    var elevation = 0.0;
+    var lookSensitivity = 100.0;
 
     function draw(now) {
+        // Check if the canvas still exists
+        if (!document.body.contains(gl.canvas)) {
+            cancelAnimationFrame(animationFrameId);
+            return;
+        }
+
+
+        
+     
+
+
         // Set scene transforms.
-        angl += 0.01;
+        // angl += 0.01;
 
         mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-        eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
-        mat4lookAt(viewMatrix, eyePosition, [0, 0, 0], [0, -1, 0]);
+        // eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
+        mat4lookAt(viewMatrix, eyePosition, focusPosition, [0, -1, 0]);
         mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
         // apply sorting pipeline.
@@ -262,12 +285,109 @@ function renderMain(data) {
 
         calcFPS(now);
 
-        requestAnimationFrame(draw);
+
+        // Request next animation frame
+        animationFrameId = requestAnimationFrame(draw);
     }
 
-    requestAnimationFrame(draw);
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            cancelAnimationFrame(animationFrameId);
+        } else {
+            animationFrameId = requestAnimationFrame(draw);
+        }
+    }
 
-    //}
+    // Event listener for tab visibility
+    document.addEventListener("visibilitychange", handleVisibilityChange, false);
+
+    // Start the animation loop
+    animationFrameId = requestAnimationFrame(draw);
+
+
+    var radius = Math.sqrt((eyePosition[0] - focusPosition[0]) ** 2 + (eyePosition[1] - focusPosition[1]) ** 2 + (eyePosition[2] - focusPosition[2]) ** 2)
+        
+        
+        
+    // Prevent default right-click context menu on the canvas
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault(); // Prevents the default context menu from appearing
+    });
+
+    canvas.addEventListener('mousedown', function (event) {
+        isMouseDown = true;
+        lastMousePosition = [event.clientX, event.clientY];
+    });
+
+    canvas.addEventListener('mousemove', function (event) {
+        if (event.buttons == 1) {
+            // with left click, spin around the focus position
+            let dx = event.clientX - lastMousePosition[0];
+            let dy = event.clientY - lastMousePosition[1];
+            azimuth -= dx / lookSensitivity;
+            elevation -= dy / lookSensitivity;
+            // Clamp the elevation to [-pi/2, pi/2]
+            elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, elevation));
+            eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
+            eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
+            eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
+
+            console.log(eyePosition)
+            // really, i should be using quaternions to rotate the eye position around the focus position, thanks copilot
+            lastMousePosition = [event.clientX, event.clientY];
+        } else if (event.buttons == 4) {
+            // with middle click, zoom in and out
+            let dx = event.clientX - lastMousePosition[0];
+            let dy = event.clientY - lastMousePosition[1];
+            radius += dy / lookSensitivity;
+            // clamp the radius to [0, 10]
+            radius = Math.max(0.1, Math.min(30, radius));
+            // update eye positions with new radius
+            eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
+            eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
+            eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
+
+
+            console.log(eyePosition)
+            lastMousePosition = [event.clientX, event.clientY];
+        } else if (event.buttons == 2) {
+            // with right click, move the focus position
+            let dx = event.clientX - lastMousePosition[0];
+            let dy = event.clientY - lastMousePosition[1];
+            // move the focus position around on the surface of a sphere
+            // internal elevation is just negative elevation
+            elevation -= dy / lookSensitivity;
+            // Clamp the elevation to [-pi/2, pi/2]
+            elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, elevation));
+            azimuth -= dx / lookSensitivity;
+            focusPosition[0] = radius * Math.cos((azimuth + Math.PI) % (2 * Math.PI)) * Math.cos(-elevation) + eyePosition[0];
+            focusPosition[2] = radius * Math.sin((azimuth + Math.PI) % (2 * Math.PI)) * Math.cos(-elevation) + eyePosition[2];
+            focusPosition[1] = radius * Math.sin(-elevation) + eyePosition[1];
+           
+            lastMousePosition = [event.clientX, event.clientY];
+        }
+        
+    });
+
+    canvas.addEventListener('mouseup', function (event) {
+        isMouseDown = false;
+    });
+
+    canvas.addEventListener('wheel', function (event) {
+        event.preventDefault(); // Prevents the default scrolling behavior
+        radius += event.deltaY / 100;
+        // clamp the radius to [0, 10]
+        radius = Math.max(0.1, Math.min(30, radius));
+        // update eye positions with new radius
+        eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
+        eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
+        eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
+    },{ passive: false });
+
+    canvas.addEventListener('mouseleave', function (event) {
+        isMouseDown = false;
+    });
+    
 
     image.src = "img/house.png";
 }
