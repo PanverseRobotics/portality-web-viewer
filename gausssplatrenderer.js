@@ -1,9 +1,6 @@
 import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
-
-
-
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
@@ -11,11 +8,8 @@ import { permuteArray } from './lib/pointarray.js';
 import loadSplatFile from './lib/splatfile.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
 
-
-
 const canvasWidth = 1024;
 const canvasHeight = 1024;
-
 
 let fpsData = {
     then: 0,
@@ -82,6 +76,23 @@ function calcFPS(now) {
     fpsData.frameCursor %= fpsData.maxFrames;
 
     updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
+}
+
+
+function getCameraTransform(canvas, viewParams){
+    var projMatrix = new Float32Array(16);
+    var viewMatrix = new Float32Array(16);
+    var viewProjMatrix = new Float32Array(16);
+
+    mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
+    mat4lookAt(viewMatrix, viewParams.eyePosition, viewParams.focusPosition, viewParams.up);
+    mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
+
+    return {
+        proj: projMatrix,
+        view: viewMatrix,
+        viewProj: viewProjMatrix
+    }
 }
 
 function setBuffers(gl, positionData, colorData, covDiagData, covUpperData) {
@@ -184,13 +195,6 @@ function renderMain(data) {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    var projMatrix = new Float32Array(16);
-    var viewMatrix = new Float32Array(16);
-    var eyePosition = [0, 0, 2];
-    var viewProjMatrix = new Float32Array(16);
-
-    var viewportScale = new Float32Array([canvas.width, canvas.height]);
-
     gl.useProgram(shaderProgram);
 
     var image = new Image();
@@ -219,11 +223,16 @@ function renderMain(data) {
     var i = 0;
     let isMouseDown = false;
     let lastMousePosition = [0, 0];
-    var eyePosition = [5, 0, 0]
-    var focusPosition = [0, 0, 0]
-    var azimuth = 0.0;
-    var elevation = 0.0;
-    var lookSensitivity = 100.0;
+
+    var viewParams = {
+        up: [0, -1, 0],
+        eyePosition: [5, 0, 0],
+        focusPosition: [0, 0, 0],
+        azimuth: 0.0,
+        elevation: 0.0,
+        radius: 5.0,
+        lookSensitivity: 100.0
+    };
 
     function draw(now) {
         // Check if the canvas still exists
@@ -232,18 +241,8 @@ function renderMain(data) {
             return;
         }
 
-
-        
-     
-
-
         // Set scene transforms.
-        // angl += 0.01;
-
-        mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-        // eyePosition = [5.0 * Math.sin(angl), 0.0, 5.0 * Math.cos(angl)];
-        mat4lookAt(viewMatrix, eyePosition, focusPosition, [0, -1, 0]);
-        mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
+        let cameraXform = getCameraTransform(canvas, viewParams);
 
         // apply sorting pipeline.
         let permTextures;
@@ -253,9 +252,12 @@ function renderMain(data) {
 
         // Set scene transform uniforms.
         gl.useProgram(shaderProgram);
-        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, viewMatrix);
-        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, viewProjMatrix);
-        gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), eyePosition);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, cameraXform.view);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, cameraXform.viewProj);
+
+        let viewportScale = new Float32Array([canvas.width, canvas.height]);
+
+        gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), viewParams.eyePosition);
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
         // Set viewport params.
@@ -285,7 +287,6 @@ function renderMain(data) {
 
         calcFPS(now);
 
-
         // Request next animation frame
         animationFrameId = requestAnimationFrame(draw);
     }
@@ -303,11 +304,6 @@ function renderMain(data) {
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
-
-
-    var radius = Math.sqrt((eyePosition[0] - focusPosition[0]) ** 2 + (eyePosition[1] - focusPosition[1]) ** 2 + (eyePosition[2] - focusPosition[2]) ** 2)
-        
-        
         
     // Prevent default right-click context menu on the canvas
     canvas.addEventListener('contextmenu', function(e) {
@@ -320,75 +316,26 @@ function renderMain(data) {
     });
 
     canvas.addEventListener('mousemove', function (event) {
-        if (event.buttons == 1) {
-            // with left click, spin around the focus position
-            let dx = event.clientX - lastMousePosition[0];
-            let dy = event.clientY - lastMousePosition[1];
-            azimuth -= dx / lookSensitivity;
-            elevation -= dy / lookSensitivity;
-            // Clamp the elevation to [-pi/2, pi/2]
-            elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, elevation));
-            eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
-            eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
-            eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
-
-            console.log(eyePosition)
-            // really, i should be using quaternions to rotate the eye position around the focus position, thanks copilot
-            lastMousePosition = [event.clientX, event.clientY];
-        } else if (event.buttons == 4) {
-            // with middle click, zoom in and out
-            let dx = event.clientX - lastMousePosition[0];
-            let dy = event.clientY - lastMousePosition[1];
-            radius += dy / lookSensitivity;
-            // clamp the radius to [0, 10]
-            radius = Math.max(0.1, Math.min(30, radius));
-            // update eye positions with new radius
-            eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
-            eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
-            eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
-
-
-            console.log(eyePosition)
-            lastMousePosition = [event.clientX, event.clientY];
-        } else if (event.buttons == 2) {
-            // with right click, move the focus position
-            let dx = event.clientX - lastMousePosition[0];
-            let dy = event.clientY - lastMousePosition[1];
-            // move the focus position around on the surface of a sphere
-            // internal elevation is just negative elevation
-            elevation -= dy / lookSensitivity;
-            // Clamp the elevation to [-pi/2, pi/2]
-            elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, elevation));
-            azimuth -= dx / lookSensitivity;
-            focusPosition[0] = radius * Math.cos((azimuth + Math.PI) % (2 * Math.PI)) * Math.cos(-elevation) + eyePosition[0];
-            focusPosition[2] = radius * Math.sin((azimuth + Math.PI) % (2 * Math.PI)) * Math.cos(-elevation) + eyePosition[2];
-            focusPosition[1] = radius * Math.sin(-elevation) + eyePosition[1];
-           
-            lastMousePosition = [event.clientX, event.clientY];
-        }
-        
+        viewMoveMouse(event, lastMousePosition, viewParams);
+        lastMousePosition = [event.clientX, event.clientY];
     });
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
     });
 
+    
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
-        radius += event.deltaY / 100;
-        // clamp the radius to [0, 10]
-        radius = Math.max(0.1, Math.min(30, radius));
-        // update eye positions with new radius
-        eyePosition[0] = radius * Math.cos(azimuth) * Math.cos(elevation) + focusPosition[0];
-        eyePosition[2] = radius * Math.sin(azimuth) * Math.cos(elevation) + focusPosition[2];
-        eyePosition[1] = radius * Math.sin(elevation) + focusPosition[1];
+        
+        viewZoomWheel(event, viewParams);
+
     },{ passive: false });
 
     canvas.addEventListener('mouseleave', function (event) {
         isMouseDown = false;
     });
     
-
     image.src = "img/house.png";
 }
 
