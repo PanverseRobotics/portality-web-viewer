@@ -2,6 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
+import { viewMoveMouse, viewZoomWheel } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -77,7 +78,6 @@ function calcFPS(now) {
 
     updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
 }
-
 
 function getCameraTransform(canvas, viewParams){
     var projMatrix = new Float32Array(16);
@@ -217,9 +217,6 @@ function renderMain(data) {
     let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
     var animationFrameId;
 
-    var rotationMatrix = new Float32Array(16);
-
-    var angl = 0.0;
     var i = 0;
     let isMouseDown = false;
     let lastMousePosition = [0, 0];
