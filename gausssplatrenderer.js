@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewZoomWheel } from './lib/utils/view.js';
+import { viewMoveMouse, viewDollyWheel } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -321,7 +321,7 @@ function renderMain(data) {
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
         
-        viewZoomWheel(event, viewParams);
+        viewDollyWheel(event, viewParams);
 
     },{ passive: false });
 
