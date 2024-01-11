@@ -6,7 +6,6 @@ import { viewMoveMouse, viewZoomWheel } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
-import loadSplatFile from './lib/splatfile.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
 
 const canvasWidth = 1024;
@@ -197,8 +196,6 @@ function renderMain(data) {
 
     gl.useProgram(shaderProgram);
 
-    var image = new Image();
-
     var buffer = gl.createBuffer();
     // make this buffer the current 'ELEMENT_ARRAY_BUFFER'
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
@@ -231,7 +228,7 @@ function renderMain(data) {
         lookSensitivity: 100.0
     };
 
-    function draw(now) {
+    let draw = function (now) {
         // Check if the canvas still exists
         if (!document.body.contains(gl.canvas)) {
             cancelAnimationFrame(animationFrameId);
@@ -244,7 +241,7 @@ function renderMain(data) {
         // apply sorting pipeline.
         let permTextures;
         if (i % SORT_INTERVAL == 0) {
-            permTextures = applyPipeline(gl, pipeline, eyePosition, viewProjMatrix);
+            permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
         }
 
         // Set scene transform uniforms.
@@ -261,7 +258,6 @@ function renderMain(data) {
         gl.viewport(0, 0, canvasWidth, canvasHeight);
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, 0, canvasWidth, canvasHeight);
-
 
         setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
         gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
@@ -333,13 +329,9 @@ function renderMain(data) {
         isMouseDown = false;
     });
     
-    image.src = "img/house.png";
-}
-
-function bicycleMain() {
-    loadSplatFile('./bicycle.splat', renderMain);
+    return draw;
 }
 
 
-export { renderMain, loadSplatFile, bicycleMain };
+export { renderMain };
 
