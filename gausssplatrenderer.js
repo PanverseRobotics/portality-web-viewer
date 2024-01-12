@@ -36,7 +36,7 @@ function initWebgl(canvas) {
         document.body.innerHTML = "This example requires WebGL 2 which is unavailable on this system."
     }
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     // gl.enable(gl.BLEND);
     // gl.depthMask(false);
     gl.clear(gl.COLOR_BUFFER_BIT);
