@@ -8,9 +8,6 @@ import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
 
-const canvasWidth = 1024;
-const canvasHeight = 1024;
-
 let fpsData = {
     then: 0,
     frameTimes: [],
@@ -171,6 +168,7 @@ function setTextures(gl, program, permTextures, vertexTextures) {
     gl.uniform1i(gl.getUniformLocation(program, 'covUpperTexture'), 6);
 }
 
+
 function renderMain(data) {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
@@ -250,14 +248,15 @@ function renderMain(data) {
         gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, cameraXform.viewProj);
 
         let viewportScale = new Float32Array([canvas.width, canvas.height]);
+        //let viewportScale = new Float32Array([512,512]);
 
         gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), viewParams.eyePosition);
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
         // Set viewport params.
-        gl.viewport(0, 0, canvasWidth, canvasHeight);
+        gl.viewport(0, 0, canvas.width, canvas.height);
         gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(0, 0, canvasWidth, canvasHeight);
+        gl.scissor(0, 0, canvas.width, canvas.height);
 
         setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
         gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
@@ -284,6 +283,13 @@ function renderMain(data) {
         animationFrameId = requestAnimationFrame(draw);
     }
 
+    // Function to resize the canvas to full window size
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+
     function handleVisibilityChange() {
         if (document.hidden) {
             cancelAnimationFrame(animationFrameId);
@@ -291,6 +297,10 @@ function renderMain(data) {
             animationFrameId = requestAnimationFrame(draw);
         }
     }
+
+    // Listen for window resize events
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial resize
 
     // Event listener for tab visibility
     document.addEventListener("visibilitychange", handleVisibilityChange, false);
