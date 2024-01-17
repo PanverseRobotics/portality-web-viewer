@@ -3,50 +3,18 @@
 
 <head>
     <title>Portality Splat Viewer</title>
-    <style>
-        /* Make the canvas fill the entire screen */
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: black;
-            color: white;
-        }
-
-        canvas {
-            display: block;
-            /* Removes the margin inside the canvas */
-            width: 100%;
-            height: 100%;
-        }
-
-        #canvas-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        #text-overlay {
-            position: absolute;
-            top: 10px; /* Adjust as needed */
-            left: 10px; /* Adjust as needed */
-            color: white;
-            font-size: 24px;
-            /* Additional styling as needed */
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 <div id="canvas-container">
     <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
     <div id="text-overlay">
-        <div> fps: <span id="fps"></span></div>
-        <div>average fps: <span id="avg"></span></div>
-        <button id="openFileButton">Open File</button>
+        <button id="openFileButton">Open splat file</button>
+        <div class="bottomDiv">
+            <div> fps: <span id="fps"></span></div>
+            <div>average fps: <span id="avg"></span></div>
+        </div>
     </div>
 </div>
 
