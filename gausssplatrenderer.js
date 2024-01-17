@@ -56,8 +56,13 @@ function updateFPSDisplay(fps, averageFPS) {
 }
 
 function calcFPS(now) {
+    console.log(now);
+    console.log(fpsData);
+
     const deltaTime = now - fpsData.then;
     fpsData.then = now;
+    if (deltaTime == 0) return;
+    
     const fps = 1000 / deltaTime;
 
     // add the current fps and remove the oldest fps
