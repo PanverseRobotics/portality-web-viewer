@@ -14,10 +14,5 @@ Mouse wheel: Dolly camera closer/farther from the focus point.
 
 The splat format is compatible with the .splat format introduced by https://github.com/antimatter15/splat.
 
-- https://antimatter15.com/splat/?url=plush.splat#[0.95,0.19,-0.23,0,-0.16,0.98,0.12,0,0.24,-0.08,0.97,0,-0.33,-1.52,1.53,1]
-- https://antimatter15.com/splat/?url=truck.splat
-- https://antimatter15.com/splat/?url=garden.splat
-- https://antimatter15.com/splat/?url=treehill.splat
-- https://antimatter15.com/splat/?url=stump.splat#[-0.86,-0.23,0.45,0,0.27,0.54,0.8,0,-0.43,0.81,-0.4,0,0.92,-2.02,4.1,1]
-- https://antimatter15.com/splat/?url=bicycle.splat
-- https://antimatter15.com/splat/?url=https://media.reshot.ai/models/nike_next/model.splat#[0.95,0.16,-0.26,0,-0.16,0.99,0.01,0,0.26,0.03,0.97,0,0.01,-1.96,2.82,1]
+Some example splats:
+https://drive.google.com/drive/folders/1QiC1Ney-TKmCZpdbF7r-vYVeR1D4G09f?usp=sharing
