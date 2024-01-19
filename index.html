@@ -24,6 +24,22 @@
     import { renderMain } from './gausssplatrenderer.js';
     import loadSplatData from './lib/splatfile.js';
 
+    function readURL() {
+        const params = new URLSearchParams(window.location.search);
+        const url = params.get('url'); // Get the 'url' parameter
+        if (url) {
+            // If the url parameter is set, load the file from the url
+            fetch(url)
+                .then(response => response.arrayBuffer())
+                .then(data => {
+                    // Process the file contents
+                    let splatData = loadSplatData(data);
+
+                    renderMain(splatData);
+                });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         // Create a hidden file input element
         const fileInput = document.createElement('input');
@@ -64,6 +80,8 @@
             fileInput.click();
         });
     });
+
+    readURL();
 
 </script>
 
