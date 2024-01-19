@@ -18,3 +18,5 @@ The splat format is compatible with the .splat format introduced by https://gith
 
 Some example splats:
 https://drive.google.com/drive/folders/1QiC1Ney-TKmCZpdbF7r-vYVeR1D4G09f?usp=sharing
+
+To load from a URL, specify the link as a `url` argument, e.g. https://viewer.portality.ai/index.html?url=...
