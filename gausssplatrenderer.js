@@ -328,6 +328,10 @@ function renderMain(data) {
         lastMousePosition = [event.clientX, event.clientY];
     });
 
+    canvas.addEventListener('keydown', function (event) {
+        viewKeyMove(event, viewParams);
+    });
+
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
     });
