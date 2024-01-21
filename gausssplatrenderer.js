@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewDollyWheel } from './lib/utils/view.js';
+import { viewMoveMouse, viewDollyWheel, viewKeyMove } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -228,7 +228,7 @@ function renderMain(data) {
         azimuth: 0.0,
         elevation: 0.0,
         radius: 5.0,
-        lookSensitivity: 100.0
+        lookSensitivity: 300.0
     };
 
     let draw = function (now) {
