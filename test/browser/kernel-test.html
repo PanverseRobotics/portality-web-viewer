@@ -23,10 +23,16 @@
     const gl = canvas.getContext("webgl2");
 
     import { createEncodeKernel, createDecodeKernel } from "../../lib/kernels/ordering.js";
-    import createDepthKernel from "../../lib/kernels/depth.js";
+    import { createDepthKernel,  createDepthIndexedKernel } from "../../lib/kernels/depth.js";
     import createPermuteKernel from "../../lib/kernels/permute.js";
 
-    import {toTexture, createBitonicKernel, bitonicSort} from '../../lib/pipeline.js'
+    import {
+        toTexture,
+        createGetChannelKernel,
+        createBitonicKernel,
+        createFullBitonicKernel,
+        bitonicSort
+    } from '../../lib/pipeline.js'
 
     const { expect } = chai;
 
@@ -45,6 +51,34 @@
             input: inp,
             inputTex: inx.toArray(),
             output: result.toArray()
+        };
+    }
+
+    function sortArrayFull(gl, inp, n, m, order='forward'){
+        const inx = toTexture(gl, inp, n, m, 'unsigned', 2);
+
+        const bitKer = [
+            createFullBitonicKernel(gl, n, m, order),
+            createFullBitonicKernel(gl, n, m, order)
+        ];
+
+        const getChannel0Ker = createGetChannelKernel(gl, n, m, 0);
+        const getChannel1Ker = createGetChannelKernel(gl, n, m, 1);
+
+        let result = bitonicSort(bitKer, inx, n*m);
+
+        //let inpx = convFloatKer(getChannel0Ker(inx, 0));
+        //let inpi = convFloatKer(getChannel1Ker(inx, 1));
+
+        let resultx = getChannel0Ker(result, 0);
+        let resulti = getChannel1Ker(result, 1);
+
+        return {
+            input: inp,
+            //inputTexVal: inpx.toArray(),
+            //inputTexIdx: inpi.toArray(),
+            outputVal: resultx.toArray(),
+            outputIdx: resulti.toArray()
         };
     }
 
@@ -72,6 +106,21 @@
         }
 
         return sortArray(gl, inp, group_size, n_groups, order);
+    }
+
+    var sortingFullRandom = function(gl, group_size, n_groups, order='forward') {
+        const n = group_size*n_groups;
+
+        var inp = new Uint32Array(2*n);
+
+        for (var j = 0; j < n_groups; ++j){
+            for (var i = 0; i < group_size; ++i) {
+                inp[2*(j*group_size + i) + 0] = group_size*n_groups*Math.random();
+                inp[2*(j*group_size + i) + 1] = (j*group_size + i);
+            }
+        }
+
+        return sortArrayFull(gl, inp, group_size, n_groups, order);
     }
 
     function orderingSimpleEncDec(gl, group_size, n_groups) {
@@ -214,6 +263,30 @@
             }
         });
 
+        it('Output should be sorted when using Full sort', () => {
+
+            let result1 = sortingFullRandom(gl, 8, 8);
+
+            console.log(result1);
+
+            for (var i=0; i<64; ++i)
+            {
+                if (i > 0){
+                    expect(result1.outputVal[i]).to.be.at.least(result1.outputVal[i-1]);
+                }
+                expect(result1.input[2*result1.outputIdx[i]]).to.equal(result1.outputVal[i]);
+            }
+
+            let result2 = sortingFullRandom(gl, 32, 4);
+
+            for (var i=0; i<128; ++i)
+            {
+                if (i > 0){
+                    expect(result2.outputVal[i]).to.be.at.least(result2.outputVal[i-1]);
+                }
+                expect(result1.input[2*result1.outputIdx[i]]).to.equal(result1.outputVal[i]);   
+            }
+        });
 
     });
 

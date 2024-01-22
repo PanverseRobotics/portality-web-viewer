@@ -4,7 +4,7 @@ import './lib/pipeline.js';
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
 import { viewMoveMouse, viewDollyWheel } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
-import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
+import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
 
@@ -56,13 +56,10 @@ function updateFPSDisplay(fps, averageFPS) {
 }
 
 function calcFPS(now) {
-    console.log(now);
-    console.log(fpsData);
-
     const deltaTime = now - fpsData.then;
     fpsData.then = now;
     if (deltaTime == 0) return;
-    
+
     const fps = 1000 / deltaTime;
 
     // add the current fps and remove the oldest fps
@@ -96,43 +93,6 @@ function getCameraTransform(canvas, viewParams){
     }
 }
 
-function setBuffers(gl, positionData, colorData, covDiagData, covUpperData) {
-    let shaderProgram = createRenderProgram(gl);
-
-    // Create buffers for the particle positions and colors.
-    var positionBuffer = gl.createBuffer();
-    var colorBuffer = gl.createBuffer();
-    var covDiagBuffer = gl.createBuffer();
-    var covUpperBuffer = gl.createBuffer();
-
-    // Set buffers -----------------------------------------------------
-    // Bind vertex position and color data.
-    // We ideally want to avoid having to do this each step.
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
-    var positionLoc = gl.getAttribLocation(shaderProgram, "position");
-    gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(positionLoc);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
-    var colorLoc = gl.getAttribLocation(shaderProgram, "color");
-    gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(colorLoc);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, covDiagBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, covDiagData, gl.DYNAMIC_COPY);
-    var covDiagLoc = gl.getAttribLocation(shaderProgram, "covDiag");
-    gl.vertexAttribPointer(covDiagLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(covDiagLoc);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, covUpperBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, covUpperData, gl.DYNAMIC_COPY);
-    var covUpperLoc = gl.getAttribLocation(shaderProgram, "covUpper");
-    gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(covUpperLoc);
-}
-
 function makeTextures(gl, position, color, covUpper, covDiag, group_size, n_groups) {
     return {
         position: toTexture(gl, position, group_size, n_groups, 'float', 3),
@@ -142,19 +102,30 @@ function makeTextures(gl, position, color, covUpper, covDiag, group_size, n_grou
     }
 }
 
-function setTextures(gl, program, permTextures, vertexTextures) {
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
+function setTextures(gl, program, permTextures, vertexTextures, pipelineType) {
+    if (pipelineType == 'full') {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        const permIdxLoc = gl.getUniformLocation(program, 'perm_idx');
+        gl.uniform1i(permIdxLoc, 0);
+    } else {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, permTextures.inner.texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    const permInnerIdxLoc = gl.getUniformLocation(program, 'perm_inner_idx');
-    gl.uniform1i(permInnerIdxLoc, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.inner.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        const permInnerIdxLoc = gl.getUniformLocation(program, 'perm_inner_idx');
+        gl.uniform1i(permInnerIdxLoc, 0);
+    }
 
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, vertexTextures.position.texture);
@@ -173,12 +144,13 @@ function setTextures(gl, program, permTextures, vertexTextures) {
     gl.uniform1i(gl.getUniformLocation(program, 'covUpperTexture'), 6);
 }
 
-
-function renderMain(data) {
+// pipelineType can be 'full' or 'groups'
+function renderMain(data, pipelineType='full') {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
-    let shaderProgram = createRenderProgram(gl);
+    let shaderProgram = createRenderProgram(gl, pipelineType);
+
 
     // Create objects
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -208,11 +180,17 @@ function renderMain(data) {
         gl.STATIC_DRAW
     );
 
-    let pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
-    positionData = permuteArray(positionData, pipeline.perm, 3);
-    colorData = permuteArray(colorData, pipeline.perm, 4);
-    covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
-    covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
+    let pipeline;
+    if (pipelineType == 'full') {
+        pipeline = createFullSortPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
+    } else {
+        pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
+
+        positionData = permuteArray(positionData, pipeline.perm, 3);
+        colorData = permuteArray(colorData, pipeline.perm, 4);
+        covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
+        covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
+    }
 
     let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
     var animationFrameId;
@@ -244,7 +222,11 @@ function renderMain(data) {
         // apply sorting pipeline.
         let permTextures;
         if (i % SORT_INTERVAL == 0) {
-            permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
+            if (pipelineType == 'full') {
+                permTextures = applyFullSortPipeline(gl, pipeline, cameraXform.viewProj);
+            } else {
+                permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
+            }
         }
 
         // Set scene transform uniforms.
@@ -263,7 +245,7 @@ function renderMain(data) {
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, 0, canvas.width, canvas.height);
 
-        setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
+        setTextures(gl, shaderProgram, permTextures, vertexTextures, pipelineType);
         gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
