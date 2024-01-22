@@ -364,11 +364,13 @@ function renderMain(data) {
     });
 
     canvas.addEventListener('touchstart', function (event) {
+        event.preventDefault();
         isMouseDown = true;
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
     canvas.addEventListener('touchmove', function (event) {
+        event.preventDefault();
         viewParams.viewSpin = false;
         viewMoveMouse(event, lastMousePosition, isKeyDown, keyPressed, viewParams);
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
@@ -377,7 +379,7 @@ function renderMain(data) {
     canvas.addEventListener('touchend', function (event) {
         isMouseDown = false;
     });
-    
+
 
     
     // if (viewParams.viewSpin) {
