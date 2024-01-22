@@ -363,14 +363,14 @@ function renderMain(data) {
         isMouseDown = false;
     });
 
-    element.addEventListener('touchstart', function (event) {
+    window.addEventListener('touchstart', function (event) {
         console.log(event)
         event.preventDefault();
         isMouseDown = true;
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
-    element.addEventListener('touchmove', function (event) {
+    window.addEventListener('touchmove', function (event) {
         console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
@@ -378,7 +378,7 @@ function renderMain(data) {
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
-    element.addEventListener('touchend', function (event) {
+    window.addEventListener('touchend', function (event) {
         isMouseDown = false;
     });
 
