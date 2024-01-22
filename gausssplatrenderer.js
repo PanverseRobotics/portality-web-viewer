@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewDollyWheel } from './lib/utils/view.js';
+import { viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewAutoSpin, stopAutoSpin, viewMoveTouch } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -56,8 +56,8 @@ function updateFPSDisplay(fps, averageFPS) {
 }
 
 function calcFPS(now) {
-    console.log(now);
-    console.log(fpsData);
+    // console.log(now);
+    // console.log(fpsData);
 
     const deltaTime = now - fpsData.then;
     fpsData.then = now;
@@ -219,7 +219,9 @@ function renderMain(data) {
 
     var i = 0;
     let isMouseDown = false;
+    let isKeyDown = false;
     let lastMousePosition = [0, 0];
+    let keyPressed = '';
 
     var viewParams = {
         up: [0, -1, 0],
@@ -228,7 +230,8 @@ function renderMain(data) {
         azimuth: 0.0,
         elevation: 0.0,
         radius: 5.0,
-        lookSensitivity: 100.0
+        lookSensitivity: 300.0,
+        viewSpin: true,
     };
 
     let draw = function (now) {
@@ -324,9 +327,24 @@ function renderMain(data) {
     });
 
     canvas.addEventListener('mousemove', function (event) {
-        viewMoveMouse(event, lastMousePosition, viewParams);
+        viewParams.viewSpin = false;
+        viewMoveMouse(event, lastMousePosition, isKeyDown, keyPressed, viewParams);
         lastMousePosition = [event.clientX, event.clientY];
     });
+
+    window.addEventListener('keydown', function (event) {
+        viewParams.viewSpin = false;
+        isKeyDown = true;
+        keyPressed = event.key;
+        viewMoveKey(event, viewParams);
+    });
+    
+    
+
+    window.addEventListener('keyup', function (event) {
+        isKeyDown = false;
+        keyPressed = '';
+    }); 
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
@@ -336,14 +354,44 @@ function renderMain(data) {
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
         
-        viewDollyWheel(event, viewParams);
+        viewDollyWheelTranslate(event, viewParams);
+        // Formerly viewDollyWheel
 
     },{ passive: false });
 
     canvas.addEventListener('mouseleave', function (event) {
         isMouseDown = false;
     });
+
+    window.addEventListener('touchstart', function (event) {
+        console.log(event)
+        event.preventDefault();
+        isMouseDown = true;
+        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+    });
+
+    window.addEventListener('touchmove', function (event) {
+        console.log(event)
+        event.preventDefault();
+        viewParams.viewSpin = false;
+        viewMoveTouch(event, lastMousePosition, viewParams);
+        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+    });
+
+    window.addEventListener('touchend', function (event) {
+        isMouseDown = false;
+    });
+
+
     
+    // if (viewParams.viewSpin) {
+    //     console.log(viewParams.viewSpin)
+    //     viewAutoSpin(viewParams);
+    // } else {
+    //     stopAutoSpin(viewParams);
+    // }
+    // IT WON'T STOP SPINNING!!!!
+
     return draw;
 }
 
