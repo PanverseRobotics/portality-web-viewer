@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewAutoSpin, stopAutoSpin } from './lib/utils/view.js';
+import { viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewAutoSpin, stopAutoSpin, viewMoveTouch } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -364,15 +364,17 @@ function renderMain(data) {
     });
 
     canvas.addEventListener('touchstart', function (event) {
+        console.log(event)
         event.preventDefault();
         isMouseDown = true;
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
     canvas.addEventListener('touchmove', function (event) {
+        console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
-        viewMoveMouse(event, lastMousePosition, isKeyDown, keyPressed, viewParams);
+        viewMoveTouch(event, lastMousePosition, viewParams);
         lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
