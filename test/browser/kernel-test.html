@@ -34,6 +34,11 @@
         bitonicSort
     } from '../../lib/pipeline.js'
 
+    import {
+        sortSteps,
+        applySteps
+    } from '../../lib/bitonic.js' 
+
     const { expect } = chai;
 
     function sortArray(gl, inp, n, m, order='forward'){
@@ -65,10 +70,9 @@
         const getChannel0Ker = createGetChannelKernel(gl, n, m, 0);
         const getChannel1Ker = createGetChannelKernel(gl, n, m, 1);
 
-        let result = bitonicSort(bitKer, inx, n*m);
-
-        //let inpx = convFloatKer(getChannel0Ker(inx, 0));
-        //let inpi = convFloatKer(getChannel1Ker(inx, 1));
+        //let result = bitonicSort(bitKer, inx, n*m);
+        let steps = sortSteps(n*m);
+        let result = applySteps(bitKer, inx, steps, 0, steps.length);
 
         let resultx = getChannel0Ker(result, 0);
         let resulti = getChannel1Ker(result, 1);
@@ -267,8 +271,6 @@
 
             let result1 = sortingFullRandom(gl, 8, 8);
 
-            console.log(result1);
-
             for (var i=0; i<64; ++i)
             {
                 if (i > 0){
@@ -284,7 +286,17 @@
                 if (i > 0){
                     expect(result2.outputVal[i]).to.be.at.least(result2.outputVal[i-1]);
                 }
-                expect(result1.input[2*result1.outputIdx[i]]).to.equal(result1.outputVal[i]);   
+                expect(result2.input[2*result2.outputIdx[i]]).to.equal(result2.outputVal[i]);   
+            }
+
+            let result3 = sortingFullRandom(gl, 32, 7);
+
+            for (var i=0; i<224; ++i)
+            {
+                if (i > 0){
+                    expect(result3.outputVal[i]).to.be.at.least(result3.outputVal[i-1]);
+                }
+                expect(result3.input[2*result3.outputIdx[i]]).to.equal(result3.outputVal[i]);   
             }
         });
 

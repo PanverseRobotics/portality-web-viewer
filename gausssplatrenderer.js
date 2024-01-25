@@ -93,26 +93,35 @@ function getCameraTransform(canvas, viewParams){
     }
 }
 
-function makeTextures(gl, position, color, covUpper, covDiag, group_size, n_groups) {
+
+// pad to change positions from [x1, y1, z1, x2, y2, z2, ...]
+// to [x1, y1, z1, 0, x1, y1, z2, 0, ...]
+function padPositions(positions){
+    let n = Math.ceil((positions.length / 3) | 0);
+
+    let paddedPositions = new Float32Array(4 * n);
+
+    for (let i = 0; i < n; i += 1) {
+        paddedPositions[4 * i] = positions[3 * i];
+        paddedPositions[4 * i + 1] = positions[3 * i + 1];
+        paddedPositions[4 * i + 2] = positions[3 * i + 2];
+        paddedPositions[4 * i + 3] = 0;
+    }
+
+    return paddedPositions;
+}
+
+function makeTextures(gl, position, color, covP2, covP1, group_size, n_groups) {
     return {
-        position: toTexture(gl, position, group_size, n_groups, 'float', 3),
+        position: toTexture(gl, position, group_size, n_groups, 'float', 4),
         color: toTexture(gl, color, group_size, n_groups, 'float', 4),
-        covDiag: toTexture(gl, covDiag, group_size, n_groups, 'float', 3),
-        covUpper: toTexture(gl, covUpper, group_size, n_groups, 'float', 3)
+        covP1: toTexture(gl, covP1, group_size, n_groups, 'float', 4),
+        covP2: toTexture(gl, covP2, group_size, n_groups, 'float', 2)
     }
 }
 
-function setTextures(gl, program, permTextures, vertexTextures, pipelineType) {
-    if (pipelineType == 'full') {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, permTextures.texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        const permIdxLoc = gl.getUniformLocation(program, 'perm_idx');
-        gl.uniform1i(permIdxLoc, 0);
-    } else {
+function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
+    if (pipelineType == 'kdtree') {
         gl.activeTexture(gl.TEXTURE2);
         gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
         gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
@@ -136,36 +145,35 @@ function setTextures(gl, program, permTextures, vertexTextures, pipelineType) {
     gl.uniform1i(gl.getUniformLocation(program, 'colorTexture'), 4);
 
     gl.activeTexture(gl.TEXTURE5);
-    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covDiag.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'covDiagTexture'), 5);
+    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covP1.texture);
+    gl.uniform1i(gl.getUniformLocation(program, 'covP1Texture'), 5);
 
     gl.activeTexture(gl.TEXTURE6);
-    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covUpper.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'covUpperTexture'), 6);
+    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covP2.texture);
+    gl.uniform1i(gl.getUniformLocation(program, 'covP2Texture'), 6);
 }
 
-// pipelineType can be 'full' or 'groups'
+
+// pipelineType can be 'full' or 'kdtree'
 function renderMain(data, pipelineType='full') {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
     let shaderProgram = createRenderProgram(gl, pipelineType);
 
-
     // Create objects
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
     const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
-    // const NUM_PARTICLES = 2048000; // for testing only
 
-    const SORT_INTERVAL = 1;
+    const SORT_INTERVAL = 6;
 
-    let positionData = data.positions;
+    let positionData = padPositions(data.positions);
     let colorData = data.colors;
 
     let covData = rotorsToCov3D(data.scales, data.rotors);
-    let covDiagData = covData.diag;
-    let covUpperData = covData.upper;
+    let covP1Data = covData.p1;
+    let covP2Data = covData.p2;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -182,17 +190,18 @@ function renderMain(data, pipelineType='full') {
 
     let pipeline;
     if (pipelineType == 'full') {
-        pipeline = createFullSortPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
+        pipeline = createFullSortPipeline(gl, GROUP_SIZE, N_GROUPS);
     } else {
         pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
 
-        positionData = permuteArray(positionData, pipeline.perm, 3);
+        positionData = permuteArray(positionData, pipeline.perm, 4);
         colorData = permuteArray(colorData, pipeline.perm, 4);
-        covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
-        covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
+        covP1Data = permuteArray(covP1Data, pipeline.perm, 4);
+        covP2Data = permuteArray(covP2Data, pipeline.perm, 2);
     }
 
-    let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
+    let vertexTextures = makeTextures(gl, positionData, colorData, covP2Data, covP1Data, GROUP_SIZE, N_GROUPS);
+
     var animationFrameId;
 
     var i = 0;
@@ -209,6 +218,8 @@ function renderMain(data, pipelineType='full') {
         lookSensitivity: 100.0
     };
 
+    var permTextures; 
+
     let draw = function (now) {
         // Check if the canvas still exists
         if (!document.body.contains(gl.canvas)) {
@@ -220,13 +231,14 @@ function renderMain(data, pipelineType='full') {
         let cameraXform = getCameraTransform(canvas, viewParams);
 
         // apply sorting pipeline.
-        let permTextures;
-        if (i % SORT_INTERVAL == 0) {
-            if (pipelineType == 'full') {
-                permTextures = applyFullSortPipeline(gl, pipeline, cameraXform.viewProj);
-            } else {
+        if (pipelineType == 'full') {
+            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length/SORT_INTERVAL));
+            permTextures = [];
+        } else {
+            if (((i % SORT_INTERVAL) | 0) == 0) {
                 permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
             }
+            i += 1;
         }
 
         // Set scene transform uniforms.
@@ -245,7 +257,7 @@ function renderMain(data, pipelineType='full') {
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, 0, canvas.width, canvas.height);
 
-        setTextures(gl, shaderProgram, permTextures, vertexTextures, pipelineType);
+        bindTextures(gl, shaderProgram, permTextures, vertexTextures, pipelineType);
         gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
