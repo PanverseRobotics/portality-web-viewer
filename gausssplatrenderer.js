@@ -221,6 +221,7 @@ function renderMain(data) {
     let isMouseDown = false;
     let isKeyDown = false;
     let lastMousePosition = [0, 0];
+    let lastTouchPosition = [0, 0, 0, 0];
     let keyPressed = '';
 
     var viewParams = {
@@ -367,15 +368,15 @@ function renderMain(data) {
         console.log(event)
         event.preventDefault();
         isMouseDown = true;
-        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY];
     });
 
     window.addEventListener('touchmove', function (event) {
         console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
-        viewMoveTouch(event, lastMousePosition, viewParams);
-        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+        viewMoveTouch(event, lastTouchPosition, viewParams);
+        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,event.touches[1].clientX, event.touches[1].clientY];
     });
 
     window.addEventListener('touchend', function (event) {
