@@ -155,7 +155,7 @@ function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
 
 
 // pipelineType can be 'full' or 'kdtree'
-function renderMain(data, pipelineType='full') {
+function renderMain(data, pipelineType='kdtree') {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
