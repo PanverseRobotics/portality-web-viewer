@@ -7,16 +7,20 @@
 </head>
 
 <body>
-<div id="canvas-container">
-    <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
-    <div id="text-overlay">
-        <button id="openFileButton">Open splat file</button>
-        <div class="bottomDiv">
-            <div> fps: <span id="fps"></span></div>
-            <div>average fps: <span id="avg"></span></div>
+    <div id="canvas-container">
+        <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
+        <div id="text-overlay">
+            <button id="openFileButton">Open splat file</button>
+            <button id="githubRepoButton"
+                onclick="window.location.href='https://github.com/PanverseRobotics/web-viewer';">
+                Github Repository
+            </button>
+            <div class="bottomDiv">
+                <div> fps: <span id="fps"></span></div>
+                <div>average fps: <span id="avg"></span></div>
+            </div>
         </div>
     </div>
-</div>
 
 </body>
 

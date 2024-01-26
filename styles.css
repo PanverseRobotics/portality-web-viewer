@@ -24,9 +24,12 @@ canvas {
 }
 
 .bottomDiv {
-    position: fixed;   /* Fixed position relative to the viewport */
-    bottom: 0;         /* Align to the bottom of the viewport */
-    width: 100%;       /* Take full width */
+    position: fixed;
+    /* Fixed position relative to the viewport */
+    bottom: 0;
+    /* Align to the bottom of the viewport */
+    width: 100%;
+    /* Take full width */
     /* Add other styles like background, padding, etc. as needed */
 }
 
@@ -44,19 +47,50 @@ canvas {
 }
 
 #openFileButton {
-    background-color: #00000060;  /* Black background */
-    color: white;             /* White text */
-    border: 2px solid white;  /* White border */
+    background-color: #00000060;
+    /* Black background */
+    color: white;
+    /* White text */
+    border: 2px solid white;
+    /* White border */
     border-radius: 5px;
-    padding: 10px 20px;       /* Padding around the text */
-    font-size: 16px;          /* Font size */
+    padding: 10px 20px;
+    /* Padding around the text */
+    font-size: 16px;
+    /* Font size */
     font-family: 'Montserrat', sans-serif;
-    cursor: pointer;          /* Change mouse cursor on hover */
-    outline: none;            /* Remove outline */
-    transition: 0.3s;         /* Smooth transition for hover effects */
+    cursor: pointer;
+    /* Change mouse cursor on hover */
+    outline: none;
+    /* Remove outline */
+    transition: 0.3s;
+    /* Smooth transition for hover effects */
+}
+
+#githubRepoButton {
+    background-color: #00000060;
+    /* Black background */
+    color: white;
+    /* White text */
+    border: 2px solid white;
+    /* White border */
+    border-radius: 5px;
+    padding: 10px 20px;
+    /* Padding around the text */
+    font-size: 16px;
+    /* Font size */
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    /* Change mouse cursor on hover */
+    outline: none;
+    /* Remove outline */
+    transition: 0.3s;
+    /* Smooth transition for hover effects */
 }
 
 #openFileButton:hover {
-    background-color: white; /* Change background to white on hover */
-    color: black;            /* Change text color to black on hover */
+    background-color: white;
+    /* Change background to white on hover */
+    color: black;
+    /* Change text color to black on hover */
 }
