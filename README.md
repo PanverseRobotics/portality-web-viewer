@@ -12,6 +12,14 @@ Left mouse + drag: Orbit camera around the focus point.
 Right mouse + drag: Pan camera by moving focus point around camera's origin.
 Mouse wheel: Dolly camera closer/farther from the focus point.
 
+## Setting default camera params
+
+The camera parameters on startup, such as camera position, the location where the camera is looking, and the up vector, can be specified as parameters, e.g.
+
+```
+https://viewer.portality.ai/index.html?camera=5.0,0.0,0.0&lookAt=0.1,0.0,0.08&up=0.0,-1.0,0.0
+```
+
 ## Examples
 
 The splat format is compatible with the .splat format introduced by https://github.com/antimatter15/splat.

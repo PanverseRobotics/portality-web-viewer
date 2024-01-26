@@ -155,7 +155,7 @@ function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
 
 
 // pipelineType can be 'full' or 'kdtree'
-function renderMain(data, pipelineType='kdtree') {
+function renderMain(data, cameraParams, pipelineType='kdtree') {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
@@ -211,9 +211,9 @@ function renderMain(data, pipelineType='kdtree') {
     let keyPressed = '';
 
     var viewParams = {
-        up: [0, -1, 0],
-        eyePosition: [5, 0, 0],
-        focusPosition: [0, 0, 0],
+        up: cameraParams.up,
+        eyePosition: cameraParams.position,
+        focusPosition: cameraParams.lookAt,
         azimuth: 0.0,
         elevation: 0.0,
         radius: 5.0,

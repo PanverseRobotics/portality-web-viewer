@@ -24,8 +24,25 @@
     import { renderMain } from './gausssplatrenderer.js';
     import loadSplatData from './lib/splatfile.js';
 
-    function readURL() {
+    let cameraParams = {
+        position: [5, 0, 0],
+        lookAt: [0, 0, 0],
+        up: [0, -1, 0]
+    };
+
+    function readParams() {
         const params = new URLSearchParams(window.location.search);
+
+        // Function to parse a comma-separated string into an array of numbers
+        const parseVector = (param, defaultValue) => {
+            return param ? param.split(',').map(Number) : defaultValue;
+        };
+
+        // Extract and parse each parameter, or use default values if not present
+        cameraParams.position = parseVector(params.get('camera'), cameraParams.position);
+        cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
+        cameraParams.up = parseVector(params.get('up'), cameraParams.up);
+
         const url = params.get('url'); // Get the 'url' parameter
         if (url) {
             // If the url parameter is set, load the file from the url
@@ -35,7 +52,7 @@
                     // Process the file contents
                     let splatData = loadSplatData(data);
 
-                    renderMain(splatData);
+                    renderMain(splatData, cameraParams);
                 });
         }
     }
@@ -66,7 +83,7 @@
                 let data = loadSplatData(e.target.result);
 
                 // Process the file contents
-                renderMain(data);
+                renderMain(data, cameraParams);
             };
 
             // Read the file as text
@@ -80,7 +97,7 @@
         });
     });
 
-    readURL();
+    readParams();
 
 </script>
 
