@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewAutoSpin, stopAutoSpin, viewMoveTouch } from './lib/utils/view.js';
+import { getRadius, viewMoveMouse, viewMoveKey, viewMoveTouch } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -155,7 +155,7 @@ function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
 
 
 // pipelineType can be 'full' or 'kdtree'
-function renderMain(data, cameraParams, pipelineType='kdtree') {
+function renderMain(data, cameraParams, pipelineType) {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
@@ -216,10 +216,11 @@ function renderMain(data, cameraParams, pipelineType='kdtree') {
         focusPosition: cameraParams.lookAt,
         azimuth: 0.0,
         elevation: 0.0,
-        radius: 5.0,
         lookSensitivity: 300.0,
         viewSpin: true,
     };
+
+    viewParams.radius = getRadius(viewParams);
 
     var permTextures; 
 

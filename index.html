@@ -30,6 +30,8 @@
         up: [0, -1, 0]
     };
 
+    let pipelineType = 'full';
+
     function readParams() {
         const params = new URLSearchParams(window.location.search);
 
@@ -43,6 +45,15 @@
         cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
         cameraParams.up = parseVector(params.get('up'), cameraParams.up);
 
+        let qualityParam = params.get('quality') || pipelineType;
+        if (qualityParam === 'high') {
+            pipelineType = 'full';
+        } else if (qualityParam === 'fast') {
+            pipelineType = 'kdtree';
+        } else {
+            console.error('Invalid quality parameter: ' + qualityParam);
+        }
+
         const url = params.get('url'); // Get the 'url' parameter
         if (url) {
             // If the url parameter is set, load the file from the url
@@ -52,7 +63,7 @@
                     // Process the file contents
                     let splatData = loadSplatData(data);
 
-                    renderMain(splatData, cameraParams);
+                    renderMain(splatData, cameraParams, pipelineType);
                 });
         }
     }
@@ -83,7 +94,7 @@
                 let data = loadSplatData(e.target.result);
 
                 // Process the file contents
-                renderMain(data, cameraParams);
+                renderMain(data, cameraParams, pipelineType);
             };
 
             // Read the file as text
