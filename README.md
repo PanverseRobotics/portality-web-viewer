@@ -4,7 +4,7 @@ This is a WebGL2 implementation of a browser-based renderer for Gaussian Splats,
 
 This can be hosted locally using a webserver pointing to this folder or it can be accessed at [https://viewer.portality.ai](https://viewer.portality.ai)
 
-Coming soon on our product website at [https://portality.ai](https://portality.ai) is a way to learn these splats easily with your data.  Contact us at the email: portality at panverserobotics.com or here on github for feedback and suggestions.
+Coming soon on our product website at [https://portality.ai](https://portality.ai) is a way to learn these splats easily with your data, and much more.  Contact us at the email: portality at panverserobotics.com or here on github for feedback and suggestions.
 
 ## Controls 
 
