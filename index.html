@@ -10,7 +10,7 @@
     <div id="canvas-container">
         <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
         <div id="text-overlay">
-            <button id="openFileButton">Open splat file</button>
+            <!--<button id="openFileButton">Open splat file</button> -->
             <button id="githubRepoButton"
                 onclick="window.location.href='https://github.com/PanverseRobotics/web-viewer';">
                 Github Repository
@@ -107,9 +107,11 @@
 
         // Find the open file button and add a click event listener
         const openFileButton = document.getElementById('openFileButton');
-        openFileButton.addEventListener('click', () => {
-            fileInput.click();
-        });
+        if (openFileButton) {
+            openFileButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+        }
     });
 
     readParams();
