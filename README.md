@@ -50,7 +50,7 @@ To load from a URL, specify the link as a `url` argument, e.g. https://viewer.po
 ## Selected Demo Scenes
 Small- and medium-sized scenes are suited to mobile viewing
 
-- [Nike (Small)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/nike.splat?download=true&camera=-0.5435122372593992,2.969597742717574,-0.12681336136658672&lookAt=0.09143776213541378,-0.22592456326631527,3.666005602178593&up=0.1489333540847141,-0.9887845148632137,-0.011137289068537223)
+- [Nike (Small)](https://viewer.portality.ai/?url=https%3A%2F%2Fhuggingface.co%2Fcakewalk%2Fsplat-data%2Fresolve%2Fmain%2Fnike.splat%3Fdownload%3Dtrue&camera=-1.121157395017384%2C4.563588392281623%2C-2.6709851487313996&lookAt=-0.39177264539051626%2C1.6856062297498278%2C1.352100303898281&up=0.1489333540847141%2C-0.9887845148632137%2C-0.011137289068537223)
 - [Plush (Small)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/plush.splat?download=true&camera=1.351354312542493%2C2.364996233810519%2C-0.8300492817799272&lookAt=-0.06348554241382653%2C0.3566753476187289%2C3.524818730331691&up=0%2C-1%2C0)
 - [Chess (Small)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/chess.splat&camera=-3.28,-3.28,2.05&lookAt=0.76,-0.49,1.11&up=-0.44,-0.58,-0.69)
 - [Train (Small)](https://viewer.portality.ai/?url=https%3A%2F%2Fhuggingface.co%2Fcakewalk%2Fsplat-data%2Fresolve%2Fmain%2Ftrain.splat%3Fdownload%3Dtrue&camera=0.5618383688141906%2C-1.0299536294326785%2C-2.2620414235248365&lookAt=-1.7152198471608104%2C0.4635614403200746%2C1.9313365247982288&up=0%2C-1%2C0)
