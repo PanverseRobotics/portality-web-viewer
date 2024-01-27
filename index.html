@@ -7,16 +7,24 @@
 </head>
 
 <body>
-<div id="canvas-container">
-    <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
-    <div id="text-overlay">
-        <button id="openFileButton">Open splat file</button>
-        <div class="bottomDiv">
-            <div> fps: <span id="fps"></span></div>
-            <div>average fps: <span id="avg"></span></div>
+    <div id="canvas-container">
+        <canvas id="gl-canvas" style="width: 100%; height:100%;"></canvas>
+        <div id="text-overlay">
+            <button id="githubRepoButton"
+                onclick="window.location.href='https://github.com/PanverseRobotics/web-viewer';">
+                Github Repository
+            </button>
+            <button id="openFileButton">Open splat file</button>
+            <div class="bottomDiv">
+                <div> fps: <span id="fps"></span></div>
+                <div>average fps: <span id="avg"></span></div>
+            </div>
         </div>
+        <div id="loadingSymbol" style="display: none;">
+            <img src="img/rotating.svg" alt="Loading..." />
+        </div>
+        
     </div>
-</div>
 
 </body>
 
@@ -24,10 +32,40 @@
     import { renderMain } from './gausssplatrenderer.js';
     import loadSplatData from './lib/splatfile.js';
 
-    function readURL() {
+    let cameraParams = {
+        position: [5, 0, 0],
+        lookAt: [0, 0, 0],
+        up: [0, -1, 0]
+    };
+
+    let pipelineType = 'full';
+
+    function readParams() {
         const params = new URLSearchParams(window.location.search);
+
+        // Function to parse a comma-separated string into an array of numbers
+        const parseVector = (param, defaultValue) => {
+            return param ? param.split(',').map(Number) : defaultValue;
+        };
+
+        // Extract and parse each parameter, or use default values if not present
+        cameraParams.position = parseVector(params.get('camera'), cameraParams.position);
+        cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
+        cameraParams.up = parseVector(params.get('up'), cameraParams.up);
+
+        let qualityParam = params.get('quality') || pipelineType;
+        if (qualityParam === 'high') {
+            pipelineType = 'full';
+        } else if (qualityParam === 'fast') {
+            pipelineType = 'kdtree';
+        } else {
+            console.error('Invalid quality parameter: ' + qualityParam);
+        }
+
         const url = params.get('url'); // Get the 'url' parameter
         if (url) {
+            document.getElementById('loadingSymbol').style.display = 'block';
+
             // If the url parameter is set, load the file from the url
             fetch(url)
                 .then(response => response.arrayBuffer())
@@ -35,7 +73,9 @@
                     // Process the file contents
                     let splatData = loadSplatData(data);
 
-                    renderMain(splatData);
+                    document.getElementById('loadingSymbol').style.display = 'none';
+                    
+                    renderMain(splatData, cameraParams, pipelineType);
                 });
         }
     }
@@ -66,8 +106,7 @@
                 let data = loadSplatData(e.target.result);
 
                 // Process the file contents
-                //console.log(fileContents);
-                renderMain(data);
+                renderMain(data, cameraParams, pipelineType);
             };
 
             // Read the file as text
@@ -76,12 +115,18 @@
 
         // Find the open file button and add a click event listener
         const openFileButton = document.getElementById('openFileButton');
-        openFileButton.addEventListener('click', () => {
-            fileInput.click();
-        });
+        const params = new URLSearchParams(window.location.search);
+        const url = params.get('url'); // Get the 'url' parameter
+        if (!url) { // only use button if no url
+            openFileButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+        } else {
+            openFileButton.remove();
+        }
     });
 
-    readURL();
+    readParams();
 
 </script>
 

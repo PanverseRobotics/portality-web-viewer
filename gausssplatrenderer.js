@@ -2,9 +2,9 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewAutoSpin, stopAutoSpin, viewMoveTouch } from './lib/utils/view.js';
+import { getRadius, viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewMoveTouch } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
-import { createPipeline, applyPipeline, toTexture } from './lib/pipeline.js';
+import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
 
@@ -56,13 +56,10 @@ function updateFPSDisplay(fps, averageFPS) {
 }
 
 function calcFPS(now) {
-    // console.log(now);
-    // console.log(fpsData);
-
     const deltaTime = now - fpsData.then;
     fpsData.then = now;
     if (deltaTime == 0) return;
-    
+
     const fps = 1000 / deltaTime;
 
     // add the current fps and remove the oldest fps
@@ -80,7 +77,7 @@ function calcFPS(now) {
     updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
 }
 
-function getCameraTransform(canvas, viewParams){
+function getCameraTransform(canvas, viewParams) {
     var projMatrix = new Float32Array(16);
     var viewMatrix = new Float32Array(16);
     var viewProjMatrix = new Float32Array(16);
@@ -96,65 +93,48 @@ function getCameraTransform(canvas, viewParams){
     }
 }
 
-function setBuffers(gl, positionData, colorData, covDiagData, covUpperData) {
-    let shaderProgram = createRenderProgram(gl);
 
-    // Create buffers for the particle positions and colors.
-    var positionBuffer = gl.createBuffer();
-    var colorBuffer = gl.createBuffer();
-    var covDiagBuffer = gl.createBuffer();
-    var covUpperBuffer = gl.createBuffer();
+// pad to change positions from [x1, y1, z1, x2, y2, z2, ...]
+// to [x1, y1, z1, 0, x1, y1, z2, 0, ...]
+function padPositions(positions) {
+    let n = Math.ceil((positions.length / 3) | 0);
 
-    // Set buffers -----------------------------------------------------
-    // Bind vertex position and color data.
-    // We ideally want to avoid having to do this each step.
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_COPY);
-    var positionLoc = gl.getAttribLocation(shaderProgram, "position");
-    gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(positionLoc);
+    let paddedPositions = new Float32Array(4 * n);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.DYNAMIC_COPY);
-    var colorLoc = gl.getAttribLocation(shaderProgram, "color");
-    gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(colorLoc);
+    for (let i = 0; i < n; i += 1) {
+        paddedPositions[4 * i] = positions[3 * i];
+        paddedPositions[4 * i + 1] = positions[3 * i + 1];
+        paddedPositions[4 * i + 2] = positions[3 * i + 2];
+        paddedPositions[4 * i + 3] = 0;
+    }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, covDiagBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, covDiagData, gl.DYNAMIC_COPY);
-    var covDiagLoc = gl.getAttribLocation(shaderProgram, "covDiag");
-    gl.vertexAttribPointer(covDiagLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(covDiagLoc);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, covUpperBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, covUpperData, gl.DYNAMIC_COPY);
-    var covUpperLoc = gl.getAttribLocation(shaderProgram, "covUpper");
-    gl.vertexAttribPointer(covUpperLoc, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(covUpperLoc);
+    return paddedPositions;
 }
 
-function makeTextures(gl, position, color, covUpper, covDiag, group_size, n_groups) {
+function makeTextures(gl, position, color, covP2, covP1, group_size, n_groups) {
     return {
-        position: toTexture(gl, position, group_size, n_groups, 'float', 3),
+        position: toTexture(gl, position, group_size, n_groups, 'float', 4),
         color: toTexture(gl, color, group_size, n_groups, 'float', 4),
-        covDiag: toTexture(gl, covDiag, group_size, n_groups, 'float', 3),
-        covUpper: toTexture(gl, covUpper, group_size, n_groups, 'float', 3)
+        covP1: toTexture(gl, covP1, group_size, n_groups, 'float', 4),
+        covP2: toTexture(gl, covP2, group_size, n_groups, 'float', 2)
     }
 }
 
-function setTextures(gl, program, permTextures, vertexTextures) {
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
+function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
+    if (pipelineType == 'kdtree') {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.outer.texture);
+        gl.uniform1i(gl.getUniformLocation(program, 'perm_outer_idx'), 2);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, permTextures.inner.texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    const permInnerIdxLoc = gl.getUniformLocation(program, 'perm_inner_idx');
-    gl.uniform1i(permInnerIdxLoc, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, permTextures.inner.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        const permInnerIdxLoc = gl.getUniformLocation(program, 'perm_inner_idx');
+        gl.uniform1i(permInnerIdxLoc, 0);
+    }
 
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, vertexTextures.position.texture);
@@ -165,35 +145,35 @@ function setTextures(gl, program, permTextures, vertexTextures) {
     gl.uniform1i(gl.getUniformLocation(program, 'colorTexture'), 4);
 
     gl.activeTexture(gl.TEXTURE5);
-    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covDiag.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'covDiagTexture'), 5);
+    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covP1.texture);
+    gl.uniform1i(gl.getUniformLocation(program, 'covP1Texture'), 5);
 
     gl.activeTexture(gl.TEXTURE6);
-    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covUpper.texture);
-    gl.uniform1i(gl.getUniformLocation(program, 'covUpperTexture'), 6);
+    gl.bindTexture(gl.TEXTURE_2D, vertexTextures.covP2.texture);
+    gl.uniform1i(gl.getUniformLocation(program, 'covP2Texture'), 6);
 }
 
 
-function renderMain(data) {
+// pipelineType can be 'full' or 'kdtree'
+function renderMain(data, cameraParams, pipelineType) {
     let canvas = initCanvas();
     let gl = initWebgl(canvas);
 
-    let shaderProgram = createRenderProgram(gl);
+    let shaderProgram = createRenderProgram(gl, pipelineType);
 
     // Create objects
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
     const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
-    // const NUM_PARTICLES = 2048000; // for testing only
 
-    const SORT_INTERVAL = 1;
+    const SORT_INTERVAL = 6;
 
-    let positionData = data.positions;
+    let positionData = padPositions(data.positions);
     let colorData = data.colors;
 
     let covData = rotorsToCov3D(data.scales, data.rotors);
-    let covDiagData = covData.diag;
-    let covUpperData = covData.upper;
+    let covP1Data = covData.p1;
+    let covP2Data = covData.p2;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -208,13 +188,20 @@ function renderMain(data) {
         gl.STATIC_DRAW
     );
 
-    let pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
-    positionData = permuteArray(positionData, pipeline.perm, 3);
-    colorData = permuteArray(colorData, pipeline.perm, 4);
-    covDiagData = permuteArray(covDiagData, pipeline.perm, 3);
-    covUpperData = permuteArray(covUpperData, pipeline.perm, 3);
+    let pipeline;
+    if (pipelineType == 'full') {
+        pipeline = createFullSortPipeline(gl, GROUP_SIZE, N_GROUPS);
+    } else {
+        pipeline = createPipeline(gl, positionData, GROUP_SIZE, N_GROUPS);
 
-    let vertexTextures = makeTextures(gl, positionData, colorData, covUpperData, covDiagData, GROUP_SIZE, N_GROUPS);
+        positionData = permuteArray(positionData, pipeline.perm, 4);
+        colorData = permuteArray(colorData, pipeline.perm, 4);
+        covP1Data = permuteArray(covP1Data, pipeline.perm, 4);
+        covP2Data = permuteArray(covP2Data, pipeline.perm, 2);
+    }
+
+    let vertexTextures = makeTextures(gl, positionData, colorData, covP2Data, covP1Data, GROUP_SIZE, N_GROUPS);
+
     var animationFrameId;
 
     var i = 0;
@@ -225,15 +212,18 @@ function renderMain(data) {
     let keyPressed = '';
 
     var viewParams = {
-        up: [0, -1, 0],
-        eyePosition: [5, 0, 0],
-        focusPosition: [0, 0, 0],
+        up: cameraParams.up,
+        eyePosition: cameraParams.position,
+        focusPosition: cameraParams.lookAt,
         azimuth: 0.0,
         elevation: 0.0,
-        radius: 5.0,
         lookSensitivity: 300.0,
         viewSpin: true,
     };
+
+    viewParams.radius = getRadius(viewParams);
+
+    var permTextures;
 
     let draw = function (now) {
         // Check if the canvas still exists
@@ -246,9 +236,14 @@ function renderMain(data) {
         let cameraXform = getCameraTransform(canvas, viewParams);
 
         // apply sorting pipeline.
-        let permTextures;
-        if (i % SORT_INTERVAL == 0) {
-            permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
+        if (pipelineType == 'full') {
+            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
+            permTextures = [];
+        } else {
+            if (((i % SORT_INTERVAL) | 0) == 0) {
+                permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
+            }
+            i += 1;
         }
 
         // Set scene transform uniforms.
@@ -267,7 +262,7 @@ function renderMain(data) {
         gl.enable(gl.SCISSOR_TEST);
         gl.scissor(0, 0, canvas.width, canvas.height);
 
-        setTextures(gl, shaderProgram, permTextures, vertexTextures, GROUP_SIZE, N_GROUPS);
+        bindTextures(gl, shaderProgram, permTextures, vertexTextures, pipelineType);
         gl.uniform2i(gl.getUniformLocation(shaderProgram, 'textureSize'), GROUP_SIZE, N_GROUPS);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -316,9 +311,9 @@ function renderMain(data) {
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
-        
+
     // Prevent default right-click context menu on the canvas
-    canvas.addEventListener('contextmenu', function(e) {
+    canvas.addEventListener('contextmenu', function (e) {
         e.preventDefault(); // Prevents the default context menu from appearing
     });
 
@@ -339,26 +334,26 @@ function renderMain(data) {
         keyPressed = event.key;
         viewMoveKey(event, viewParams);
     });
-    
-    
+
+
 
     window.addEventListener('keyup', function (event) {
         isKeyDown = false;
         keyPressed = '';
-    }); 
+    });
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
     });
 
-    
+
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
-        
+
         viewDollyWheelTranslate(event, viewParams);
         // Formerly viewDollyWheel
 
-    },{ passive: false });
+    }, { passive: false });
 
     canvas.addEventListener('mouseleave', function (event) {
         isMouseDown = false;
@@ -384,7 +379,7 @@ function renderMain(data) {
     });
 
 
-    
+
     // if (viewParams.viewSpin) {
     //     console.log(viewParams.viewSpin)
     //     viewAutoSpin(viewParams);
