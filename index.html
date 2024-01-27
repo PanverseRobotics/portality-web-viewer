@@ -14,6 +14,7 @@
                 onclick="window.location.href='https://github.com/PanverseRobotics/web-viewer';">
                 Github Repository
             </button>
+            <button id="urlLinkButton">Get Current Link</button>
             <button id="openFileButton">Open splat file</button>
             <div class="bottomDiv">
                 <div> fps: <span id="fps"></span></div>
@@ -23,7 +24,7 @@
         <div id="loadingSymbol" style="display: none;">
             <img src="img/rotating.svg" alt="Loading..." />
         </div>
-        
+
     </div>
 
 </body>
@@ -74,7 +75,7 @@
                     let splatData = loadSplatData(data);
 
                     document.getElementById('loadingSymbol').style.display = 'none';
-                    
+
                     renderMain(splatData, cameraParams, pipelineType);
                 });
         }
@@ -124,6 +125,7 @@
         } else {
             openFileButton.remove();
         }
+
     });
 
     readParams();

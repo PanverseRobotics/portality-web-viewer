@@ -308,6 +308,29 @@ function renderMain(data, cameraParams, pipelineType) {
     // Event listener for tab visibility
     document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
+    // Function to create the camera query string
+    function createQueryString(cameraObject) {
+        // Parse existing query parameters
+        const params = new URLSearchParams(window.location.search);
+
+        // Update with new parameters from cameraObject
+        params.set('camera', cameraObject.eyePosition.join(','));
+        params.set('lookAt', cameraObject.focusPosition.join(','));
+        params.set('up', cameraObject.up.join(','));
+
+        // Return the full query string
+        return params.toString();
+    }
+
+    // event listener for the button to get the url link
+    const urlLinkButton = document.getElementById('urlLinkButton');
+    urlLinkButton.addEventListener('click', () => {
+        const queryString = createQueryString(viewParams);
+
+        const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
+        alert(fullUrl);
+    });
+
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
 
