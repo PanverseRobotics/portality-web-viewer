@@ -374,7 +374,7 @@ function renderMain(data, cameraParams, pipelineType) {
         } else {
             lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
         }
-    }
+    });
 
     window.addEventListener('touchend', function (event) {
         isMouseDown = false;
