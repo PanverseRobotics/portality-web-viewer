@@ -369,8 +369,12 @@ function renderMain(data, cameraParams, pipelineType) {
         event.preventDefault();
         viewParams.viewSpin = false;
         viewMoveTouch(event, lastTouchPosition, viewParams);
-        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
-    });
+        if (event.touches.length == 1) {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,0,0];
+        } else {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
+        }
+    }
 
     window.addEventListener('touchend', function (event) {
         isMouseDown = false;
