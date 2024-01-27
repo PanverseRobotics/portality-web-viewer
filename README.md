@@ -50,14 +50,14 @@ To load from a URL, specify the link as a `url` argument, e.g. https://viewer.po
 ## Selected Demo Scenes
 Small- and medium-sized scenes are suited to mobile viewing
 
-- [Nike (Small)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/nike.splat)
-- [Plush (Small)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/plush.splat)
+- [Nike (Small)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/nike.splat?download=true)
+- [Plush (Small)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/plush.splat?download=true)
 - [Chess (Small)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/chess.splat)
-- [Train (Small)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/train.splat)
-- [Truck (Medium)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/truck.splat)
+- [Train (Small)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/train.splat?download=true)
+- [Truck (Medium)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/truck.splat?download=true)
 - [DomeGreenhouse (Medium)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/domegreenhouse.splat)
 - [Dumpster (Large)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/dumpster.splat)
-- [Bicycle (Large)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/bicycle.splat)
-- [Garden (Large)](https://viewer.portality.ai/?url=https://d3c617x64bvo7w.cloudfront.net/garden.splat)
+- [Bicycle (Large)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/bicycle.splat?download=true)
+- [Garden (Large)](https://viewer.portality.ai/?url=https://huggingface.co/cakewalk/splat-data/resolve/main/garden.splat?download=true)
 
 
