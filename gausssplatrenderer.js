@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { getRadius, viewMoveMouse, viewMoveKey, viewMoveTouch } from './lib/utils/view.js';
+import { getRadius, viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewMoveTouch } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -77,7 +77,7 @@ function calcFPS(now) {
     updateFPSDisplay(fps, fpsData.totalFPS / fpsData.numFrames);
 }
 
-function getCameraTransform(canvas, viewParams){
+function getCameraTransform(canvas, viewParams) {
     var projMatrix = new Float32Array(16);
     var viewMatrix = new Float32Array(16);
     var viewProjMatrix = new Float32Array(16);
@@ -96,7 +96,7 @@ function getCameraTransform(canvas, viewParams){
 
 // pad to change positions from [x1, y1, z1, x2, y2, z2, ...]
 // to [x1, y1, z1, 0, x1, y1, z2, 0, ...]
-function padPositions(positions){
+function padPositions(positions) {
     let n = Math.ceil((positions.length / 3) | 0);
 
     let paddedPositions = new Float32Array(4 * n);
@@ -222,7 +222,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
     viewParams.radius = getRadius(viewParams);
 
-    var permTextures; 
+    var permTextures;
 
     let draw = function (now) {
         // Check if the canvas still exists
@@ -236,7 +236,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // apply sorting pipeline.
         if (pipelineType == 'full') {
-            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length/SORT_INTERVAL));
+            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
             permTextures = [];
         } else {
             if (((i % SORT_INTERVAL) | 0) == 0) {
@@ -310,9 +310,9 @@ function renderMain(data, cameraParams, pipelineType) {
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
-        
+
     // Prevent default right-click context menu on the canvas
-    canvas.addEventListener('contextmenu', function(e) {
+    canvas.addEventListener('contextmenu', function (e) {
         e.preventDefault(); // Prevents the default context menu from appearing
     });
 
@@ -333,26 +333,26 @@ function renderMain(data, cameraParams, pipelineType) {
         keyPressed = event.key;
         viewMoveKey(event, viewParams);
     });
-    
-    
+
+
 
     window.addEventListener('keyup', function (event) {
         isKeyDown = false;
         keyPressed = '';
-    }); 
+    });
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
     });
 
-    
+
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
-        
+
         viewDollyWheelTranslate(event, viewParams);
         // Formerly viewDollyWheel
 
-    },{ passive: false });
+    }, { passive: false });
 
     canvas.addEventListener('mouseleave', function (event) {
         isMouseDown = false;
@@ -378,7 +378,7 @@ function renderMain(data, cameraParams, pipelineType) {
     });
 
 
-    
+
     // if (viewParams.viewSpin) {
     //     console.log(viewParams.viewSpin)
     //     viewAutoSpin(viewParams);
