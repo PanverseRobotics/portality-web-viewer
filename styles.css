@@ -94,3 +94,18 @@ canvas {
     color: black;
     /* Change text color to black on hover */
 }
+
+#loadingSymbol {
+    position: fixed; 
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: rotate 2s linear infinite;
+    transform-origin: 50% 50%; /* Adjust if necessary */
+}
+
+@keyframes rotate {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+

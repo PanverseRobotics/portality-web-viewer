@@ -20,6 +20,10 @@
                 <div>average fps: <span id="avg"></span></div>
             </div>
         </div>
+        <div id="loadingSymbol" style="display: none;">
+            <img src="img/rotating.svg" alt="Loading..." />
+        </div>
+        
     </div>
 
 </body>
@@ -60,6 +64,8 @@
 
         const url = params.get('url'); // Get the 'url' parameter
         if (url) {
+            document.getElementById('loadingSymbol').style.display = 'block';
+
             // If the url parameter is set, load the file from the url
             fetch(url)
                 .then(response => response.arrayBuffer())
@@ -67,6 +73,8 @@
                     // Process the file contents
                     let splatData = loadSplatData(data);
 
+                    document.getElementById('loadingSymbol').style.display = 'none';
+                    
                     renderMain(splatData, cameraParams, pipelineType);
                 });
         }
