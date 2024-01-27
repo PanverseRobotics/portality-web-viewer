@@ -54,7 +54,7 @@
         cameraParams.up = parseVector(params.get('up'), cameraParams.up);
 
         let qualityParam = params.get('quality') || pipelineType;
-        if (qualityParam === 'high') {
+        if (qualityParam === 'full') {
             pipelineType = 'full';
         } else if (qualityParam === 'fast') {
             pipelineType = 'kdtree';

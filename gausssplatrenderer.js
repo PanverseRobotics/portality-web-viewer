@@ -343,6 +343,7 @@ function renderMain(data, cameraParams, pipelineType) {
     });
 
     canvas.addEventListener('mouseup', function (event) {
+        console.log(viewParams)
         isMouseDown = false;
     });
 
@@ -363,15 +364,15 @@ function renderMain(data, cameraParams, pipelineType) {
         console.log(event)
         event.preventDefault();
         isMouseDown = true;
-        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY];
+        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
     });
 
     window.addEventListener('touchmove', function (event) {
         console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
-        viewMoveTouch(event, lastTouchPosition, viewParams);
-        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,event.touches[1].clientX, event.touches[1].clientY];
+        viewMoveTouch(event, lastMousePosition, viewParams);
+        lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
     });
 
     window.addEventListener('touchend', function (event) {
