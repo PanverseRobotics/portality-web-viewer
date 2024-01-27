@@ -350,7 +350,6 @@ function renderMain(data, cameraParams, pipelineType) {
 
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
-
         viewDollyWheelTranslate(event, viewParams);
         // Formerly viewDollyWheel
 
@@ -361,17 +360,15 @@ function renderMain(data, cameraParams, pipelineType) {
     });
 
     window.addEventListener('touchstart', function (event) {
-        console.log(event)
         event.preventDefault();
         isMouseDown = true;
         lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
     });
 
     window.addEventListener('touchmove', function (event) {
-        console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
-        viewMoveTouch(event, lastMousePosition, viewParams);
+        viewMoveTouch(event, lastTouchPosition, viewParams);
         lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
     });
 
