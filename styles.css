@@ -88,6 +88,27 @@ canvas {
     /* Smooth transition for hover effects */
 }
 
+#urlLinkButton {
+    background-color: #00000060;
+    /* Black background */
+    color: white;
+    /* White text */
+    border: 2px solid white;
+    /* White border */
+    border-radius: 5px;
+    padding: 10px 20px;
+    /* Padding around the text */
+    font-size: 16px;
+    /* Font size */
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    /* Change mouse cursor on hover */
+    outline: none;
+    /* Remove outline */
+    transition: 0.3s;
+    /* Smooth transition for hover effects */
+}
+
 #openFileButton:hover {
     background-color: white;
     /* Change background to white on hover */
@@ -96,16 +117,21 @@ canvas {
 }
 
 #loadingSymbol {
-    position: fixed; 
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     animation: rotate 2s linear infinite;
-    transform-origin: 50% 50%; /* Adjust if necessary */
+    transform-origin: 50% 50%;
+    /* Adjust if necessary */
 }
 
 @keyframes rotate {
-    from { transform: translate(-50%, -50%) rotate(0deg); }
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-}
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
 
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
