@@ -329,6 +329,13 @@ function renderMain(data, cameraParams, pipelineType) {
 
         const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
         alert(fullUrl);
+        console.log(fullUrl);
+        // why doesn't this work??!?!??!
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            console.log('URL copied to clipboard');
+        }).catch(err => {
+            console.error('Error in copying text: ', err);
+        });
     });
 
     // Start the animation loop
