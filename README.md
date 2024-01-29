@@ -4,7 +4,7 @@ This is a WebGL2 implementation of a browser-based renderer for Gaussian Splats,
 
 This can be hosted locally using a webserver pointing to this folder or it can be accessed at [https://viewer.portality.ai](https://viewer.portality.ai/index.html?url=https%3A%2F%2Fhuggingface.co%2Fcakewalk%2Fsplat-data%2Fresolve%2Fmain%2Fnike.splat%3Fdownload%3Dtrue&camera=-1.121157395017384%2C4.563588392281623%2C-2.6709851487313996&lookAt=-0.39177264539051626%2C1.6856062297498278%2C1.352100303898281&up=0.1489333540847141%2C-0.9887845148632137%2C-0.011137289068537223)
 
-Coming soon on our product website at [https://portality.ai](https://portality.ai) is a way to learn these splats easily with your data, and much more.  Contact us at the email: portality at panverserobotics.com or here on github for feedback and suggestions.
+Coming soon on our product website at [https://portality.ai](https://portality.ai) is a way to learn these splats easily with your data, and much more.  Join our discord server: [Panverse Robotics](https://discord.gg/kmFUXWw5Um), or contact us at the email: portality at panverserobotics.com or here on github for feedback and suggestions.
 
 ## Controls 
 
