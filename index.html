@@ -37,7 +37,9 @@
     let cameraParams = {
         position: [5, 0, 0],
         lookAt: [0, 0, 0],
-        up: [0, -1, 0]
+        up: [0, -1, 0],
+        azimuth: 0,
+        elevation: 0
     };
 
     let pipelineType = 'full';
@@ -54,6 +56,8 @@
         cameraParams.position = parseVector(params.get('camera'), cameraParams.position);
         cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
         cameraParams.up = parseVector(params.get('up'), cameraParams.up);
+        cameraParams.azimuth = parseFloat(params.get('azimuth')) || cameraParams.azimuth;
+        cameraParams.elevation = parseFloat(params.get('elevation')) || cameraParams.elevation;
 
         let qualityParam = params.get('quality') || pipelineType;
         if (qualityParam === 'high') {

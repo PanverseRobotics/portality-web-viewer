@@ -214,8 +214,8 @@ function renderMain(data, cameraParams, pipelineType) {
         up: cameraParams.up,
         eyePosition: cameraParams.position,
         focusPosition: cameraParams.lookAt,
-        azimuth: 0.0,
-        elevation: 0.0,
+        azimuth: cameraParams.azimuth,
+        elevation: cameraParams.elevation,
         lookSensitivity: 300.0,
         viewSpin: true,
     };
@@ -317,6 +317,8 @@ function renderMain(data, cameraParams, pipelineType) {
         params.set('camera', cameraObject.eyePosition.join(','));
         params.set('lookAt', cameraObject.focusPosition.join(','));
         params.set('up', cameraObject.up.join(','));
+        params.set('azimuth', cameraObject.azimuth);
+        params.set('elevation', cameraObject.elevation);
 
         // Return the full query string
         return params.toString();
