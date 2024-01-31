@@ -215,8 +215,8 @@ function renderMain(data, cameraParams, pipelineType) {
         up: cameraParams.up,
         eyePosition: cameraParams.position,
         focusPosition: cameraParams.lookAt,
-        azimuth: 0.0,
-        elevation: 0.0,
+        azimuth: cameraParams.azimuth,
+        elevation: cameraParams.elevation,
         lookSensitivity: 300.0,
         viewSpin: true,
     };
@@ -308,6 +308,38 @@ function renderMain(data, cameraParams, pipelineType) {
 
     // Event listener for tab visibility
     document.addEventListener("visibilitychange", handleVisibilityChange, false);
+
+    // Function to create the camera query string
+    function createQueryString(cameraObject) {
+        // Parse existing query parameters
+        const params = new URLSearchParams(window.location.search);
+
+        // Update with new parameters from cameraObject
+        params.set('camera', cameraObject.eyePosition.join(','));
+        params.set('lookAt', cameraObject.focusPosition.join(','));
+        params.set('up', cameraObject.up.join(','));
+        params.set('azimuth', cameraObject.azimuth);
+        params.set('elevation', cameraObject.elevation);
+
+        // Return the full query string
+        return params.toString();
+    }
+
+    // event listener for the button to get the url link
+    const urlLinkButton = document.getElementById('urlLinkButton');
+    urlLinkButton.addEventListener('click', () => {
+        const queryString = createQueryString(viewParams);
+
+        const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
+        alert(fullUrl);
+        console.log(fullUrl);
+        // why doesn't this work??!?!??!
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            console.log('URL copied to clipboard');
+        }).catch(err => {
+            console.error('Error in copying text: ', err);
+        });
+    });
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
