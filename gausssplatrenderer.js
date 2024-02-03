@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { getRadius, viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewMoveTouch, lazyInitializeViewMatrix } from './lib/utils/view.js';
+import { getRadius, viewMoveMouse, viewDollyWheel, viewMoveKey, viewMoveTouch, lazyInitializeViewMatrix } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -390,7 +390,7 @@ function renderMain(data, cameraParams, pipelineType) {
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
 
-        viewDollyWheelTranslate(event, viewParams);
+        viewDollyWheel(event, isKeyDown, keyPressed, viewParams);
         // Formerly viewDollyWheel
 
     }, { passive: false });
