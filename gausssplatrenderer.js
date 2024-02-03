@@ -7,6 +7,7 @@ import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
+import loadSplatData from './lib/splatfile.js';
 
 let fpsData = {
     then: 0,
@@ -16,6 +17,16 @@ let fpsData = {
     maxFrames: 20,
     totalFPS: 0
 };
+
+let cameraParams = {
+    position: [5, 0, 0],
+    lookAt: [0, 0, 0],
+    up: [0, -1, 0],
+    azimuth: 0,
+    elevation: 0
+};
+
+let pipelineType = 'full';
 
 function initCanvas() {
     var canvas = document.getElementById("gl-canvas");
@@ -326,19 +337,21 @@ function renderMain(data, cameraParams, pipelineType) {
 
     // event listener for the button to get the url link
     const urlLinkButton = document.getElementById('urlLinkButton');
-    urlLinkButton.addEventListener('click', () => {
-        const queryString = createQueryString(viewParams);
+    if (urlLinkButton !== null) {
+        urlLinkButton.addEventListener('click', () => {
+            const queryString = createQueryString(viewParams);
 
-        const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
-        alert(fullUrl);
-        console.log(fullUrl);
-        // why doesn't this work??!?!??!
-        navigator.clipboard.writeText(fullUrl).then(() => {
-            console.log('URL copied to clipboard');
-        }).catch(err => {
-            console.error('Error in copying text: ', err);
+            const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
+            alert(fullUrl);
+            console.log(fullUrl);
+            // why doesn't this work??!?!??!
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                console.log('URL copied to clipboard');
+            }).catch(err => {
+                console.error('Error in copying text: ', err);
+            });
         });
-    });
+    }
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
@@ -422,6 +435,46 @@ function renderMain(data, cameraParams, pipelineType) {
     return draw;
 }
 
+function readParams() {
+    const params = new URLSearchParams(window.location.search);
 
-export { renderMain };
+    // Function to parse a comma-separated string into an array of numbers
+    const parseVector = (param, defaultValue) => {
+        return param ? param.split(',').map(Number) : defaultValue;
+    };
+
+    // Extract and parse each parameter, or use default values if not present
+    cameraParams.position = parseVector(params.get('camera'), cameraParams.position);
+    cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
+    cameraParams.up = parseVector(params.get('up'), cameraParams.up);
+
+    let qualityParam = params.get('quality') || 'high';
+    if (qualityParam === 'high') {
+        pipelineType = 'full';
+    } else if (qualityParam === 'fast') {
+        pipelineType = 'kdtree';
+    } else {
+        console.error('Invalid quality parameter: ' + qualityParam);
+    }
+
+    const url = params.get('url'); // Get the 'url' parameter
+    if (url) {
+        document.getElementById('loadingSymbol').style.display = 'block';
+
+        // If the url parameter is set, load the file from the url
+        fetch(url)
+            .then(response => response.arrayBuffer())
+            .then(data => {
+                // Process the file contents
+                let splatData = loadSplatData(data);
+
+                document.getElementById('loadingSymbol').style.display = 'none';
+
+                renderMain(splatData, cameraParams, pipelineType);
+            });
+    }
+}
+
+
+export { renderMain, readParams, cameraParams, pipelineType };
 
