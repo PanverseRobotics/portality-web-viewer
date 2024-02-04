@@ -418,6 +418,10 @@ function renderMain(data, cameraParams, pipelineType) {
         isMouseDown = false;
     });
 
+    window.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+    });
+
 
 
     // if (viewParams.viewSpin) {
