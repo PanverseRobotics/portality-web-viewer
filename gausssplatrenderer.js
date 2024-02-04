@@ -2,7 +2,7 @@ import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { getRadius, viewMoveMouse, viewDollyWheelTranslate, viewMoveKey, viewMoveTouch } from './lib/utils/view.js';
+import { getRadius, viewMoveMouse, viewDollyWheel, viewMoveKey, viewMoveTouch, lazyInitializeViewMatrix } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -90,11 +90,13 @@ function calcFPS(now) {
 
 function getCameraTransform(canvas, viewParams) {
     var projMatrix = new Float32Array(16);
-    var viewMatrix = new Float32Array(16);
+    // var viewMatrix = new Float32Array(16);
+    let viewMatrix = viewParams.viewMatrix;
     var viewProjMatrix = new Float32Array(16);
 
     mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-    mat4lookAt(viewMatrix, viewParams.eyePosition, viewParams.focusPosition, viewParams.up);
+    // mat4lookAt(viewMatrix, viewParams.eyePosition, viewParams.focusPosition, viewParams.up);
+    // mat4multiply(viewProjMatrix, projMatrix, viewParams.viewMatrix);
     mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
     return {
@@ -221,6 +223,8 @@ function renderMain(data, cameraParams, pipelineType) {
     let lastMousePosition = [0, 0];
     let keyPressed = '';
 
+
+    console.log('defining view params')
     var viewParams = {
         up: cameraParams.up,
         eyePosition: cameraParams.position,
@@ -230,9 +234,11 @@ function renderMain(data, cameraParams, pipelineType) {
         lookSensitivity: 300.0,
         viewSpin: true,
     };
+    
 
     viewParams.radius = getRadius(viewParams);
-
+    viewParams.viewMatrix = lazyInitializeViewMatrix(viewParams);
+    console.log('viewParams', viewParams)
     var permTextures;
 
     let draw = function (now) {
@@ -244,7 +250,8 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // Set scene transforms.
         let cameraXform = getCameraTransform(canvas, viewParams);
-
+       
+     
         // apply sorting pipeline.
         if (pipelineType == 'full') {
             applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
@@ -388,13 +395,15 @@ function renderMain(data, cameraParams, pipelineType) {
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
+        console.log('viewParams', viewParams)
+        console.log('transforms', getCameraTransform(canvas, viewParams))
     });
 
 
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
 
-        viewDollyWheelTranslate(event, viewParams);
+        viewDollyWheel(event, isKeyDown, keyPressed, viewParams);
         // Formerly viewDollyWheel
 
     }, { passive: false });
