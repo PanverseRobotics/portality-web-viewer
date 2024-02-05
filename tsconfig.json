@@ -1,0 +1,10 @@
+{
+    // Change this to match your project
+    "include": ["./*.js"],
+    "compilerOptions": {
+      "allowJs": true,
+      "declaration": true,
+      "emitDeclarationOnly": true,
+      "declarationMap": false
+    }
+}
