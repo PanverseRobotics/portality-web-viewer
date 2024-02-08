@@ -210,6 +210,7 @@ function renderMain(data, cameraParams, pipelineType) {
     let isMouseDown = false;
     let isKeyDown = false;
     let lastMousePosition = [0, 0];
+    let lastTouchPosition = [0, 0, 0, 0];
     let keyPressed = '';
 
 
@@ -403,15 +404,23 @@ function renderMain(data, cameraParams, pipelineType) {
         console.log(event)
         event.preventDefault();
         isMouseDown = true;
-        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+        if (event.touches.length == 1) {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,0,0];
+        } else {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
+        }
     });
 
     window.addEventListener('touchmove', function (event) {
         console.log(event)
         event.preventDefault();
         viewParams.viewSpin = false;
-        viewMoveTouch(event, lastMousePosition, viewParams);
-        lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+        viewMoveTouch(event, lastTouchPosition, viewParams);
+        if (event.touches.length == 1) {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,0,0];
+        } else {
+            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
+        }
     });
 
     window.addEventListener('touchend', function (event) {
