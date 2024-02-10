@@ -29,6 +29,8 @@ let cameraParams = {
     elevation: 0
 };
 
+let pipelineType = 'full';
+
 const mouseControlMap = {
     // Left mouse button
     1: {
