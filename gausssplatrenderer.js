@@ -21,6 +21,13 @@ let fpsData = {
     totalFPS: 0
 };
 
+let cameraParams = {
+    position: [5, 0, 0],
+    lookAt: [0, 0, 0],
+    up: [0, -1, 0],
+    azimuth: 0,
+    elevation: 0
+};
 
 const mouseControlMap = {
     // Left mouse button
