@@ -8,6 +8,7 @@ body {
     overflow: hidden;
     background-color: transparent;
     color: white;
+    touch-action: none;      
 }
 
 canvas {
