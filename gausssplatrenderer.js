@@ -1,8 +1,11 @@
 import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
+//import interact from 'interactjs';
+import interact from 'https://cdn.interactjs.io/v1.9.20/interactjs/index.js';
+
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { getRadius, viewMoveMouse, viewDollyWheel, viewMoveKey, viewMoveTouch, lazyInitializeViewMatrix } from './lib/utils/view.js';
+import { viewUpdate, viewMoveTouch, viewAutoSpin, stopAutoSpin, initializeViewMatrix } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -16,6 +19,45 @@ let fpsData = {
     maxFrames: 20,
     totalFPS: 0
 };
+
+const mouseControlMap = {
+    // Left mouse button
+    1: {
+        "Shift": "pan",
+        "Control": "strafe",
+        "Alt": "dollyRoll",
+        "": "orbit"
+    },
+    // Right mouse button
+    2: {
+        "Shift": "strafe",
+        "Control": "strafe",
+        "Alt": "strafe",
+        "": "strafe"
+    },
+    // Middle mouse button
+    4: {
+        "Shift": "dollyRoll",
+        "Control": "dollyRoll",
+        "Alt": "dollyRoll",
+        "": "dollyRoll"
+    }
+};
+
+
+function getRadius(cameraParams) {
+    let ep = cameraParams.position;
+    let fp = cameraParams.lookAt;
+
+    return Math.sqrt((ep[0] - fp[0]) ** 2 + (ep[1] - fp[1]) ** 2 + (ep[2] - fp[2]) ** 2);
+}
+
+function getViewDelta(cursorPosition, lastCursorPosition, lookSensitivity) {
+    const dx = (cursorPosition[0] - lastCursorPosition[0]) / lookSensitivity;
+    const dy = (cursorPosition[1] - lastCursorPosition[1]) / lookSensitivity;
+    return [dx, dy];
+}
+
 
 function initCanvas() {
     var canvas = document.getElementById("gl-canvas");
@@ -79,13 +121,10 @@ function calcFPS(now) {
 
 function getCameraTransform(canvas, viewParams) {
     var projMatrix = new Float32Array(16);
-    // var viewMatrix = new Float32Array(16);
-    let viewMatrix = viewParams.viewMatrix;
+    let viewMatrix = viewParams.matrix;
     var viewProjMatrix = new Float32Array(16);
 
     mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
-    // mat4lookAt(viewMatrix, viewParams.eyePosition, viewParams.focusPosition, viewParams.up);
-    // mat4multiply(viewProjMatrix, projMatrix, viewParams.viewMatrix);
     mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
 
     return {
@@ -210,24 +249,17 @@ function renderMain(data, cameraParams, pipelineType) {
     let isMouseDown = false;
     let isKeyDown = false;
     let lastMousePosition = [0, 0];
-    let lastTouchPosition = [0, 0, 0, 0];
     let keyPressed = '';
 
 
     console.log('defining view params')
-    var viewParams = {
-        up: cameraParams.up,
-        eyePosition: cameraParams.position,
-        focusPosition: cameraParams.lookAt,
-        azimuth: cameraParams.azimuth,
-        elevation: cameraParams.elevation,
-        lookSensitivity: 300.0,
-        viewSpin: true,
-    };
     
+    var viewParams = {
+        radius: getRadius(cameraParams),
+        matrix: initializeViewMatrix(cameraParams),
+        lookSensitivity: 300.0,
+    }
 
-    viewParams.radius = getRadius(viewParams);
-    viewParams.viewMatrix = lazyInitializeViewMatrix(viewParams);
     console.log('viewParams', viewParams)
     var permTextures;
 
@@ -240,7 +272,6 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // Set scene transforms.
         let cameraXform = getCameraTransform(canvas, viewParams);
-       
      
         // apply sorting pipeline.
         if (pipelineType == 'full') {
@@ -261,7 +292,6 @@ function renderMain(data, cameraParams, pipelineType) {
         let viewportScale = new Float32Array([canvas.width, canvas.height]);
         //let viewportScale = new Float32Array([512,512]);
 
-        gl.uniform3fv(gl.getUniformLocation(shaderProgram, 'uEyePosition'), viewParams.eyePosition);
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
 
         // Set viewport params.
@@ -363,8 +393,26 @@ function renderMain(data, cameraParams, pipelineType) {
 
     canvas.addEventListener('mousemove', function (event) {
         viewParams.viewSpin = false;
-        viewMoveMouse(event, lastMousePosition, isKeyDown, keyPressed, viewParams);
-        lastMousePosition = [event.clientX, event.clientY];
+        let mousePosition = [event.clientX, event.clientY];
+
+        // determine if event.button is in the keys of mouseControlMap
+        if (event.buttons in mouseControlMap) {
+            // determine if the key is in the keys of mouseControlMap[event.button]
+            let keyMap = mouseControlMap[event.buttons];
+            if(keyPressed in keyMap) {
+                // if it is, call the corresponding function
+                let action = keyMap[keyPressed];
+                let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
+                viewParams.matrix = viewUpdate(action, delta, viewParams);
+            }
+        } else {
+            if (isMouseDown){
+                let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
+                viewParams.matrix = viewUpdate('orbit', delta, viewParams);
+            }
+        }
+
+        lastMousePosition = mousePosition;
     });
 
     window.addEventListener('keydown', function (event) {
@@ -374,73 +422,77 @@ function renderMain(data, cameraParams, pipelineType) {
         viewMoveKey(event, viewParams);
     });
 
-
-
     window.addEventListener('keyup', function (event) {
         isKeyDown = false;
         keyPressed = '';
     });
 
+    canvas.addEventListener('wheel', function (event) {
+        event.preventDefault(); // Prevents the default scrolling behavior
+
+        let dy = -event.deltaY / viewParams.lookSensitivity;
+
+        viewParams.matrix = viewUpdate('dolly', dy, viewParams);
+    }, { passive: false });
+    
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
         console.log('viewParams', viewParams)
         console.log('transforms', getCameraTransform(canvas, viewParams))
     });
 
-
-    canvas.addEventListener('wheel', function (event) {
-        event.preventDefault(); // Prevents the default scrolling behavior
-
-        viewDollyWheel(event, isKeyDown, keyPressed, viewParams);
-        // Formerly viewDollyWheel
-
-    }, { passive: false });
-
     canvas.addEventListener('mouseleave', function (event) {
         isMouseDown = false;
     });
 
-    window.addEventListener('touchstart', function (event) {
-        console.log(event)
-        event.preventDefault();
+
+    canvas.addEventListener('touchmove', function (event) {
+        if (event.touches.length == 1) {
+            console.log(event.touches);
+
+            let mousePosition = [event.touches[0].clientX, event.touches[0].clientY];
+            
+            let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
+
+            if (isMouseDown) {
+                viewParams.matrix = viewUpdate('orbit', delta, viewParams);
+            }
+
+            lastMousePosition = mousePosition;
+        }
+    });
+
+    canvas.addEventListener('touchstart', function (event) {
         isMouseDown = true;
         if (event.touches.length == 1) {
-            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,0,0];
-        } else {
-            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
+            lastMousePosition = [event.touches[0].clientX, event.touches[0].clientY];
         }
     });
 
-    window.addEventListener('touchmove', function (event) {
-        console.log(event)
-        event.preventDefault();
-        viewParams.viewSpin = false;
-        viewMoveTouch(event, lastTouchPosition, viewParams);
-        if (event.touches.length == 1) {
-            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY,0,0];
-        } else {
-            lastTouchPosition = [event.touches[0].clientX, event.touches[0].clientY, event.touches[1].clientX, event.touches[1].clientY];
-        }
-    });
-
-    window.addEventListener('touchend', function (event) {
+    canvas.addEventListener('touchend', function (event) {
         isMouseDown = false;
+        lastMousePosition = [0, 0];
     });
 
-    window.addEventListener('gesturestart', function (e) {
-        e.preventDefault();
+    interact('#gl-canvas')
+    .gesturable({
+      onmove: function (event) {
+        // Panning
+        const dx = event.dx; 
+        const dy = event.dy;
+        viewParams.matrix = viewUpdate('strafe', [dx/viewParams.lookSensitivity, dy/viewParams.lookSensitivity], viewParams);
+  
+        // Pinch zooming
+        const scale = event.ds;  
+        console.log("Zoom scale: " + scale);
+  
+        // Pinch rotation
+        const rotation = event.da;
+        viewParams.matrix = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
+      }
     });
-
-
-
-    // if (viewParams.viewSpin) {
-    //     console.log(viewParams.viewSpin)
-    //     viewAutoSpin(viewParams);
-    // } else {
-    //     stopAutoSpin(viewParams);
-    // }
-    // IT WON'T STOP SPINNING!!!!
-
+      
+  
     return draw;
 }
 
