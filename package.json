@@ -13,5 +13,8 @@
     "chai": "^4.3.10",
     "interactjs": "^1.10.26",
     "mocha": "^10.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
   }
 }

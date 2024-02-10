@@ -10,6 +10,7 @@ import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
+import loadSplatData from './lib/splatfile.js';
 
 let fpsData = {
     then: 0,
@@ -19,6 +20,7 @@ let fpsData = {
     maxFrames: 20,
     totalFPS: 0
 };
+
 
 const mouseControlMap = {
     // Left mouse button
@@ -57,6 +59,7 @@ function getViewDelta(cursorPosition, lastCursorPosition, lookSensitivity) {
     const dy = (cursorPosition[1] - lastCursorPosition[1]) / lookSensitivity;
     return [dx, dy];
 }
+
 
 
 function initCanvas() {
@@ -121,6 +124,7 @@ function calcFPS(now) {
 
 function getCameraTransform(canvas, viewParams) {
     var projMatrix = new Float32Array(16);
+
     let viewMatrix = viewParams.matrix;
     var viewProjMatrix = new Float32Array(16);
 
@@ -252,15 +256,13 @@ function renderMain(data, cameraParams, pipelineType) {
     let keyPressed = '';
 
 
-    console.log('defining view params')
-    
+
     var viewParams = {
         radius: getRadius(cameraParams),
         matrix: initializeViewMatrix(cameraParams),
         lookSensitivity: 300.0,
     }
 
-    console.log('viewParams', viewParams)
     var permTextures;
 
     let draw = function (now) {
@@ -272,6 +274,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // Set scene transforms.
         let cameraXform = getCameraTransform(canvas, viewParams);
+
      
         // apply sorting pipeline.
         if (pipelineType == 'full') {
@@ -364,19 +367,21 @@ function renderMain(data, cameraParams, pipelineType) {
 
     // event listener for the button to get the url link
     const urlLinkButton = document.getElementById('urlLinkButton');
-    urlLinkButton.addEventListener('click', () => {
-        const queryString = createQueryString(viewParams);
+    if (urlLinkButton !== null) {
+        urlLinkButton.addEventListener('click', () => {
+            const queryString = createQueryString(viewParams);
 
-        const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
-        alert(fullUrl);
-        console.log(fullUrl);
-        // why doesn't this work??!?!??!
-        navigator.clipboard.writeText(fullUrl).then(() => {
-            console.log('URL copied to clipboard');
-        }).catch(err => {
-            console.error('Error in copying text: ', err);
+            const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
+            alert(fullUrl);
+            console.log(fullUrl);
+            // why doesn't this work??!?!??!
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                console.log('URL copied to clipboard');
+            }).catch(err => {
+                console.error('Error in copying text: ', err);
+            });
         });
-    });
+    }
 
     // Start the animation loop
     animationFrameId = requestAnimationFrame(draw);
@@ -427,6 +432,7 @@ function renderMain(data, cameraParams, pipelineType) {
         keyPressed = '';
     });
 
+
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
 
@@ -437,8 +443,6 @@ function renderMain(data, cameraParams, pipelineType) {
     
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
-        console.log('viewParams', viewParams)
-        console.log('transforms', getCameraTransform(canvas, viewParams))
     });
 
     canvas.addEventListener('mouseleave', function (event) {
@@ -497,6 +501,46 @@ function renderMain(data, cameraParams, pipelineType) {
     return draw;
 }
 
+function readParams() {
+    const params = new URLSearchParams(window.location.search);
 
-export { renderMain };
+    // Function to parse a comma-separated string into an array of numbers
+    const parseVector = (param, defaultValue) => {
+        return param ? param.split(',').map(Number) : defaultValue;
+    };
+
+    // Extract and parse each parameter, or use default values if not present
+    cameraParams.position = parseVector(params.get('camera'), cameraParams.position);
+    cameraParams.lookAt = parseVector(params.get('lookAt'), cameraParams.lookAt);
+    cameraParams.up = parseVector(params.get('up'), cameraParams.up);
+
+    let qualityParam = params.get('quality') || 'high';
+    if (qualityParam === 'high') {
+        pipelineType = 'full';
+    } else if (qualityParam === 'fast') {
+        pipelineType = 'kdtree';
+    } else {
+        console.error('Invalid quality parameter: ' + qualityParam);
+    }
+
+    const url = params.get('url'); // Get the 'url' parameter
+    if (url) {
+        document.getElementById('loadingSymbol').style.display = 'block';
+
+        // If the url parameter is set, load the file from the url
+        fetch(url)
+            .then(response => response.arrayBuffer())
+            .then(data => {
+                // Process the file contents
+                let splatData = loadSplatData(data);
+
+                document.getElementById('loadingSymbol').style.display = 'none';
+
+                renderMain(splatData, cameraParams, pipelineType);
+            });
+    }
+}
+
+
+export { renderMain, readParams, cameraParams, pipelineType };
 
