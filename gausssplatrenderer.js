@@ -5,7 +5,7 @@ import './lib/pipeline.js';
 import interact from 'https://cdn.interactjs.io/v1.9.20/interactjs/index.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
-import { viewUpdate, viewMoveTouch, viewAutoSpin, stopAutoSpin, initializeViewMatrix } from './lib/utils/view.js';
+import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -485,6 +485,7 @@ function renderMain(data, cameraParams, pipelineType) {
         // Pinch zooming
         const scale = event.ds;  
         console.log("Zoom scale: " + scale);
+        viewParams.matrix = viewUpdate('dolly', -5*scale, viewParams);
   
         // Pinch rotation
         const rotation = event.da;
