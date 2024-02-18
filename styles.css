@@ -24,6 +24,10 @@ canvas {
     height: 100%;
 }
 
+a {
+    color: #f7ebec;
+  }
+
 .bottomDiv {
     position: fixed;
     /* Fixed position relative to the viewport */
@@ -89,7 +93,7 @@ canvas {
     /* Smooth transition for hover effects */
 }
 
-#urlLinkButton {
+#helpButton {
     background-color: #00000060;
     /* Black background */
     color: white;
@@ -125,6 +129,56 @@ canvas {
     animation: rotate 2s linear infinite;
     transform-origin: 50% 50%;
     /* Adjust if necessary */
+}
+
+#helpMenu {
+    display: none;  /* Initially hide the menu */
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%); 
+    min-width: 380px;
+    background-color: #1d1e2c80;
+    color: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'Montserrat', sans-serif;  
+    text-align: center;
+    backdrop-filter: blur(3px);
+}
+
+/* logo placed at top center */
+#logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+}
+
+/* logo placed at top center */
+#controls {
+    width: 320px;
+    margin-bottom: 10px;
+}
+
+#mobileControlsBtn, #desktopControlsBtn {
+    background-color: transparent;
+    color: white;
+    border: 1px solid white;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 16px;
+    font-family: 'Montserrat', sans-serif;
+    outline: none;
+}
+
+#closeButton {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    border: none;
+    background: none; 
+    cursor: pointer;
+    color: white;
 }
 
 @keyframes rotate {

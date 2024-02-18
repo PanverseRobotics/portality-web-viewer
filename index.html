@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 
-
 <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 
 
@@ -20,7 +19,7 @@
                 onclick="window.location.href='https://github.com/PanverseRobotics/portality-web-viewer';">
                 Github Repository
             </button>
-            <button id="urlLinkButton">Get Current Link</button>
+            <button id="helpButton">Help (F1)</button>
             <button id="openFileButton">Open splat file</button>
             <div class="bottomDiv">
                 <div> fps: <span id="fps"></span></div>
@@ -30,7 +29,24 @@
         <div id="loadingSymbol" style="display: none;">
             <img src="img/rotating.svg" alt="Loading..." />
         </div>
+        <div id="helpMenu">
+            <img id="logo" src="img/logo.svg" alt="Portality" />
+            <br />
+            <button id="closeButton">X</button> 
 
+            <!-- div id="controls"></div -->
+            <img id="controls" src="img/controls-desktop.svg" alt="Desktop controls: LMB: Orbit, MMB: Dolly/Roll, RMB: Strafe. Mobile controls: Orbit with one finger. Dolly and roll with two finger gestures. Strafe with two finger gesture." />
+            <br />
+            <div>
+                <button id="mobileControlsBtn">Mobile controls</button>
+                <button id="desktopControlsBtn">Desktop controls</button>
+            </div>
+            <br />
+
+            Control sensitivity: <input type="range" min="0" max="100" value="30" id="controlSensitivity" />
+            <p />
+            <button id="getURLButton">Get URL at current pose</button>
+        </div>
     </div>
 
 </body>
@@ -49,6 +65,14 @@
     };
 
     let pipelineType = 'high';
+
+    function isTouchDevice() {
+        // Combine reliable detection methods:
+        return (('ontouchstart' in window) || 
+                (navigator.maxTouchPoints > 0) || 
+                (navigator.msMaxTouchPoints > 0) || 
+                (window.matchMedia("(pointer: coarse)").matches));
+    }
 
     function readParams() {
         const params = new URLSearchParams(window.location.search);
@@ -90,12 +114,13 @@
         }
     }
 
-
     document.addEventListener('DOMContentLoaded', () => {
         // Create a hidden file input element
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.style.display = 'none';
+
+        const helpMenu = document.getElementById('helpMenu');
 
         // Add the file input element to the body (it's hidden anyway)
         document.body.appendChild(fileInput);
@@ -135,7 +160,63 @@
         } else {
             openFileButton.remove();
         }
+        
+        function showHelpMenu(){
+            displayControls();
+            helpMenu.style.display = 'block';
+        }
 
+        function hideHelpMenu(){
+            helpMenu.style.display = 'none';
+        }
+
+        const helpButton = document.getElementById('helpButton');
+        helpButton.addEventListener('click', () => {
+            showHelpMenu();
+        });
+
+        window.addEventListener('keydown', function (event) {
+            event.preventDefault();
+            if (event.key === 'F1') {
+                showHelpMenu();
+            } else if (event.key === 'Escape') {
+                hideHelpMenu();
+            }
+        });
+        
+        const closeButton = document.getElementById('closeButton');
+        closeButton.addEventListener('click', () => {
+            helpMenu.style.display = 'none';
+        });
+        
+        window.addEventListener('keyup', function (event) {
+            keyPressed = '';
+        });
+
+        function displayControls(platform = '') {
+
+            const controlsImg = document.getElementById('controls');
+
+            let imgSrc;
+            if (platform == '') {
+                imgSrc = isTouchDevice() ? 'img/controls-mobile.svg' : 'img/controls-desktop.svg';
+            } else {
+                imgSrc = platform == 'mobile' ? 'img/controls-mobile.svg' : 'img/controls-desktop.svg';
+            }
+
+            controlsImg.src = imgSrc;
+        }
+
+        // Button functionality
+        const desktopControlsBtn = document.getElementById('desktopControlsBtn');
+        desktopControlsBtn.addEventListener('click', () => {
+            displayControls('desktop');
+        });
+
+        const mobileControlsBtn = document.getElementById('mobileControlsBtn');
+        mobileControlsBtn.addEventListener('click', () => {
+            displayControls('mobile');
+        });
     });
 
     readParams();

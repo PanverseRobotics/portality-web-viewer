@@ -4,7 +4,7 @@ import './lib/pipeline.js';
 //import interact from 'interactjs';
 import interact from 'https://cdn.interactjs.io/v1.9.20/interactjs/index.js';
 
-import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4lookAt } from './lib/utils/linalg.js';
+import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4ortho, mat4lookAt } from './lib/utils/linalg.js';
 import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
@@ -64,8 +64,8 @@ function getRadius(cameraParams) {
 }
 
 function getViewDelta(cursorPosition, lastCursorPosition, lookSensitivity) {
-    const dx = (cursorPosition[0] - lastCursorPosition[0]) / lookSensitivity;
-    const dy = (cursorPosition[1] - lastCursorPosition[1]) / lookSensitivity;
+    const dx = (cursorPosition[0] - lastCursorPosition[0]) * lookSensitivity;
+    const dy = (cursorPosition[1] - lastCursorPosition[1]) * lookSensitivity;
     return [dx, dy];
 }
 
@@ -260,16 +260,13 @@ function renderMain(data, cameraParams, pipelineType) {
 
     var i = 0;
     let isMouseDown = false;
-    let isKeyDown = false;
     let lastMousePosition = [0, 0];
     let keyPressed = '';
-
-
 
     var viewParams = {
         radius: getRadius(cameraParams),
         matrix: initializeViewMatrix(cameraParams),
-        lookSensitivity: 300.0,
+        lookSensitivity: 0.003,
     }
 
     var permTextures;
@@ -359,6 +356,7 @@ function renderMain(data, cameraParams, pipelineType) {
     document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
     // Function to create the camera query string
+    // TODO: get this from camera matrix
     function createQueryString(cameraObject) {
         // Parse existing query parameters
         const params = new URLSearchParams(window.location.search);
@@ -375,9 +373,9 @@ function renderMain(data, cameraParams, pipelineType) {
     }
 
     // event listener for the button to get the url link
-    const urlLinkButton = document.getElementById('urlLinkButton');
-    if (urlLinkButton !== null) {
-        urlLinkButton.addEventListener('click', () => {
+    const getURLButton = document.getElementById('getURLButton');
+    if (getURLButton !== null) {
+        getURLButton.addEventListener('click', () => {
             const queryString = createQueryString(viewParams);
 
             const fullUrl = `${window.location.origin}${window.location.pathname}?${queryString}`;
@@ -389,6 +387,21 @@ function renderMain(data, cameraParams, pipelineType) {
             }).catch(err => {
                 console.error('Error in copying text: ', err);
             });
+        });
+    }
+
+    canvas.addEventListener('keydown', function (event) {
+        // viewParams.viewSpin = false;
+        // isKeyDown = true;
+        // keyPressed = event.key;
+        // viewMoveKey(event, viewParams);
+        console.log("key down");
+    });
+
+    const sensitivitySlider = document.getElementById('controlSensitivity');
+    if (sensitivitySlider !== null) {
+        sensitivitySlider.addEventListener('input', (event) => {
+            viewParams.lookSensitivity = 0.0001*parseFloat(event.target.value);
         });
     }
 
@@ -429,23 +442,10 @@ function renderMain(data, cameraParams, pipelineType) {
         lastMousePosition = mousePosition;
     });
 
-    window.addEventListener('keydown', function (event) {
-        viewParams.viewSpin = false;
-        isKeyDown = true;
-        keyPressed = event.key;
-        viewMoveKey(event, viewParams);
-    });
-
-    window.addEventListener('keyup', function (event) {
-        isKeyDown = false;
-        keyPressed = '';
-    });
-
-
     canvas.addEventListener('wheel', function (event) {
         event.preventDefault(); // Prevents the default scrolling behavior
 
-        let dy = -event.deltaY / viewParams.lookSensitivity;
+        let dy = -event.deltaY * viewParams.lookSensitivity;
 
         viewParams.matrix = viewUpdate('dolly', dy, viewParams);
     }, { passive: false });
@@ -493,7 +493,7 @@ function renderMain(data, cameraParams, pipelineType) {
         // Panning
         const dx = event.dx; 
         const dy = event.dy;
-        viewParams.matrix = viewUpdate('strafe', [dx/viewParams.lookSensitivity, dy/viewParams.lookSensitivity], viewParams);
+        viewParams.matrix = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
   
         // Pinch zooming
         const scale = event.ds;  
@@ -551,5 +551,5 @@ function readParams() {
 }
 
 
-export { renderMain, readParams, cameraParams, pipelineType };
+export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap };
 
