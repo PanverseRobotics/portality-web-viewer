@@ -5,11 +5,12 @@ import './lib/pipeline.js';
 import interact from 'https://cdn.interactjs.io/v1.9.20/interactjs/index.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4ortho, mat4lookAt } from './lib/utils/linalg.js';
-import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix } from './lib/utils/view.js';
+import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix, viewMatGetPoseParams } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
+import {createSphereRenderProgram, createSphereCircles, renderSphereCircles} from './lib/rendering/sphere.js';
 import loadSplatData from './lib/splatfile.js';
 
 let fpsData = {
@@ -34,23 +35,24 @@ let pipelineType = 'full';
 const mouseControlMap = {
     // Left mouse button
     1: {
-        "Shift": "pan",
-        "Control": "strafe",
-        "Alt": "dollyRoll",
+        "ShiftLeft": "pan",
+        "ShiftRight": "pan",
+        "ControlLeft": "strafe",
+        "ControlRight": "strafe",
+        "AltLeft": "dollyRoll",
+        "AltRight": "dollyRoll",
         "": "orbit"
     },
+
     // Right mouse button
     2: {
-        "Shift": "strafe",
-        "Control": "strafe",
-        "Alt": "strafe",
         "": "strafe"
     },
+
     // Middle mouse button
     4: {
-        "Shift": "dollyRoll",
-        "Control": "dollyRoll",
-        "Alt": "dollyRoll",
+        "ControlLeft": "changeRadius",
+        "ControlRight": "changeRadius",
         "": "dollyRoll"
     }
 };
@@ -214,6 +216,9 @@ function renderMain(data, cameraParams, pipelineType) {
     let gl = initWebgl(canvas);
 
     let shaderProgram = createRenderProgram(gl, pipelineType);
+    let sphereProgram = createSphereRenderProgram(gl);
+
+    let circleVerts = createSphereCircles(1.0, 32);
 
     // Create objects
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -261,8 +266,8 @@ function renderMain(data, cameraParams, pipelineType) {
     var i = 0;
     let isMouseDown = false;
     let lastMousePosition = [0, 0];
-    let keyPressed = '';
-
+    let pressedKeys = new Set();
+    
     var viewParams = {
         radius: getRadius(cameraParams),
         matrix: initializeViewMatrix(cameraParams),
@@ -314,7 +319,6 @@ function renderMain(data, cameraParams, pipelineType) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // Prepare viewport for rendering and blending.
-        gl.clear(gl.COLOR_BUFFER_BIT);
         gl.clear(gl.DEPTH_BUFFER_BIT);
         gl.disable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
@@ -322,6 +326,9 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // Draw all the vertices as points, in the order given in the element array buffer.
         gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
+
+        // Draw the sphere circles
+        renderSphereCircles(gl, sphereProgram, circleVerts);
 
         // Reset values of variables so that other shaders can run.
         gl.enable(gl.DEPTH_TEST);
@@ -357,16 +364,15 @@ function renderMain(data, cameraParams, pipelineType) {
 
     // Function to create the camera query string
     // TODO: get this from camera matrix
-    function createQueryString(cameraObject) {
+    function createQueryString(viewParams) {
         // Parse existing query parameters
         const params = new URLSearchParams(window.location.search);
+        let cameraParams = viewMatGetPoseParams(viewParams.matrix, viewParams.radius);
 
         // Update with new parameters from cameraObject
-        params.set('camera', cameraObject.eyePosition.join(','));
-        params.set('lookAt', cameraObject.focusPosition.join(','));
-        params.set('up', cameraObject.up.join(','));
-        params.set('azimuth', cameraObject.azimuth);
-        params.set('elevation', cameraObject.elevation);
+        params.set('camera', cameraParams.camera.join(','));
+        params.set('lookAt', cameraParams.lookAt.join(','));
+        params.set('up', cameraParams.up.join(','));
 
         // Return the full query string
         return params.toString();
@@ -389,14 +395,17 @@ function renderMain(data, cameraParams, pipelineType) {
             });
         });
     }
-
-    canvas.addEventListener('keydown', function (event) {
-        // viewParams.viewSpin = false;
-        // isKeyDown = true;
-        // keyPressed = event.key;
-        // viewMoveKey(event, viewParams);
-        console.log("key down");
-    });
+    
+    window.addEventListener("keydown", (event) => {
+            pressedKeys.add(event.code);
+        },
+        true
+    );
+    window.addEventListener("keyup", (event) => {
+            pressedKeys.delete(event.code);
+        },
+        false,
+    );
 
     const sensitivitySlider = document.getElementById('controlSensitivity');
     if (sensitivitySlider !== null) {
@@ -424,18 +433,23 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // determine if event.button is in the keys of mouseControlMap
         if (event.buttons in mouseControlMap) {
-            // determine if the key is in the keys of mouseControlMap[event.button]
+            // determine if the button number key is in mouseControlMap[event.button]
             let keyMap = mouseControlMap[event.buttons];
+            // Is any key in both the set pressedKeys and the keys of keyMap?
+            let keyPressed = Array.from(pressedKeys).find(key => key in keyMap);
+
+            let action = keyMap[""];
             if(keyPressed in keyMap) {
                 // if it is, call the corresponding function
-                let action = keyMap[keyPressed];
-                let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
-                viewParams.matrix = viewUpdate(action, delta, viewParams);
+                action = keyMap[keyPressed];
             }
+        
+            let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
+            viewParams = viewUpdate(action, delta, viewParams);
         } else {
             if (isMouseDown){
                 let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
-                viewParams.matrix = viewUpdate('orbit', delta, viewParams);
+                viewParams = viewUpdate('orbit', delta, viewParams);
             }
         }
 
@@ -447,7 +461,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
         let dy = -event.deltaY * viewParams.lookSensitivity;
 
-        viewParams.matrix = viewUpdate('dolly', dy, viewParams);
+        viewParams = viewUpdate('dolly', dy, viewParams);
     }, { passive: false });
     
     canvas.addEventListener('mouseup', function (event) {
@@ -468,7 +482,7 @@ function renderMain(data, cameraParams, pipelineType) {
             let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
 
             if (isMouseDown) {
-                viewParams.matrix = viewUpdate('orbit', delta, viewParams);
+                viewParams = viewUpdate('orbit', delta, viewParams);
             }
 
             lastMousePosition = mousePosition;
@@ -493,16 +507,16 @@ function renderMain(data, cameraParams, pipelineType) {
         // Panning
         const dx = event.dx; 
         const dy = event.dy;
-        viewParams.matrix = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
+        viewParams = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
   
         // Pinch zooming
         const scale = event.ds;  
         console.log("Zoom scale: " + scale);
-        viewParams.matrix = viewUpdate('dolly', -5*scale, viewParams);
+        viewParams = viewUpdate('dolly', -5*scale, viewParams);
   
         // Pinch rotation
         const rotation = event.da;
-        viewParams.matrix = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
+        viewParams = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
       }
     });
       
