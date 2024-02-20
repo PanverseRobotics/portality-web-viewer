@@ -1,8 +1,7 @@
 import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
-//import interact from 'interactjs';
-import interact from 'https://cdn.interactjs.io/v1.9.20/interactjs/index.js';
+import './3rdparty/interact.min.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4ortho, mat4lookAt } from './lib/utils/linalg.js';
 import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix, viewMatGetPoseParams } from './lib/utils/view.js';
