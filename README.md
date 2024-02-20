@@ -61,3 +61,7 @@ Small- and medium-sized scenes are suited to mobile viewing
 - [Garden (Large)](https://viewer.portality.ai/?url=https%3A%2F%2Fhuggingface.co%2Fcakewalk%2Fsplat-data%2Fresolve%2Fmain%2Fgarden.splat%3Fdownload%3Dtrue&camera=-1.4758369908647406%2C2.510837853035692%2C-3.0442375737624556&lookAt=0.02552765364825771%2C0.7811866636358719%2C1.3987581461560485&up=-0.18%2C-0.86%2C-0.49&azimuth=-1.8966666666666665&elevation=0.35333333333333344)
 
 
+
+## 3rd party code
+
+This code uses [interactjs](https://github.com/taye/interact.js) for touch gestures. Attribution for interactjs goes to Taye Ademi.
