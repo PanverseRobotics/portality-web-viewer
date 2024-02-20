@@ -10,7 +10,7 @@ import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
 import createRenderProgram from './lib/rendering/vpshaders.js';
-import {createSphereRenderProgram, createSphereCircles, renderSphereCircles} from './lib/rendering/sphere.js';
+import { createSphereRenderProgram, createSphereCircles, renderSphereCircles } from './lib/rendering/sphere.js';
 import loadSplatData from './lib/splatfile.js';
 
 let fpsData = {
@@ -267,7 +267,7 @@ function renderMain(data, cameraParams, pipelineType) {
     let isMouseDown = false;
     let lastMousePosition = [0, 0];
     let pressedKeys = new Set();
-    
+
     var viewParams = {
         radius: getRadius(cameraParams),
         matrix: initializeViewMatrix(cameraParams),
@@ -286,7 +286,7 @@ function renderMain(data, cameraParams, pipelineType) {
         // Set scene transforms.
         let cameraXform = getCameraTransform(canvas, viewParams);
 
-     
+
         // apply sorting pipeline.
         if (pipelineType == 'full') {
             applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
@@ -395,22 +395,22 @@ function renderMain(data, cameraParams, pipelineType) {
             });
         });
     }
-    
+
     window.addEventListener("keydown", (event) => {
-            pressedKeys.add(event.code);
-        },
+        pressedKeys.add(event.code);
+    },
         true
     );
     window.addEventListener("keyup", (event) => {
-            pressedKeys.delete(event.code);
-        },
+        pressedKeys.delete(event.code);
+    },
         false,
     );
 
     const sensitivitySlider = document.getElementById('controlSensitivity');
     if (sensitivitySlider !== null) {
         sensitivitySlider.addEventListener('input', (event) => {
-            viewParams.lookSensitivity = 0.0001*parseFloat(event.target.value);
+            viewParams.lookSensitivity = 0.0001 * parseFloat(event.target.value);
         });
     }
 
@@ -439,15 +439,15 @@ function renderMain(data, cameraParams, pipelineType) {
             let keyPressed = Array.from(pressedKeys).find(key => key in keyMap);
 
             let action = keyMap[""];
-            if(keyPressed in keyMap) {
+            if (keyPressed in keyMap) {
                 // if it is, call the corresponding function
                 action = keyMap[keyPressed];
             }
-        
+
             let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
             viewParams = viewUpdate(action, delta, viewParams);
         } else {
-            if (isMouseDown){
+            if (isMouseDown) {
                 let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
                 viewParams = viewUpdate('orbit', delta, viewParams);
             }
@@ -463,7 +463,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
         viewParams = viewUpdate('dolly', dy, viewParams);
     }, { passive: false });
-    
+
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
     });
@@ -478,7 +478,7 @@ function renderMain(data, cameraParams, pipelineType) {
             console.log(event.touches);
 
             let mousePosition = [event.touches[0].clientX, event.touches[0].clientY];
-            
+
             let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
 
             if (isMouseDown) {
@@ -502,25 +502,25 @@ function renderMain(data, cameraParams, pipelineType) {
     });
 
     interact('#gl-canvas')
-    .gesturable({
-      onmove: function (event) {
-        // Panning
-        const dx = event.dx; 
-        const dy = event.dy;
-        viewParams = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
-  
-        // Pinch zooming
-        const scale = event.ds;  
-        console.log("Zoom scale: " + scale);
-        viewParams = viewUpdate('dolly', -5*scale, viewParams);
-  
-        // Pinch rotation
-        const rotation = event.da;
-        viewParams = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
-      }
-    });
-      
-  
+        .gesturable({
+            onmove: function (event) {
+                // Panning
+                const dx = event.dx;
+                const dy = event.dy;
+                viewParams = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
+
+                // Pinch zooming
+                const scale = event.ds;
+                console.log("Zoom scale: " + scale);
+                viewParams = viewUpdate('dolly', -5 * scale, viewParams);
+
+                // Pinch rotation
+                const rotation = event.da;
+                viewParams = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
+            }
+        });
+
+
     return draw;
 }
 
@@ -565,5 +565,5 @@ function readParams() {
 }
 
 
-export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap };
+export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap, loadSplatData };
 

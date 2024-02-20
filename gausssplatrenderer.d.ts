@@ -8,3 +8,4 @@ export namespace cameraParams {
     let elevation: number;
 }
 export let pipelineType: string;
+export function loadSplatData(data: any): ({ positions: Float32Array, scales: Float32Array, colors: Float32Array, rotors: Float32Array });
