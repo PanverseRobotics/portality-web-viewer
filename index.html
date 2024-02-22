@@ -40,9 +40,22 @@
             </div>
             <br />
 
-            Control sensitivity: <input type="range" min="0" max="100" value="30" id="controlSensitivity" />
-            <p />
-            <button id="getURLButton">Get URL at current pose</button>
+            <div>
+                Control sensitivity: <input type="range" min="0" max="100" value="30" id="controlSensitivity" />
+            </div>
+
+            <div>
+                <label for="sphereSize">Orbit sphere size:</label>
+                <input type="range" min="0" max="100" value="30" id="sphereSize" />
+            </div>
+            <div>
+                <label for="showSpheres">Show orbit radius sphere:</label>
+                <input type="checkbox" id="showSpheres" />  
+            </div>
+
+            <div>
+                <button id="getURLButton">Get URL at current pose</button>
+            </div>
         </div>
     </div>
 

@@ -4,7 +4,7 @@ import './lib/pipeline.js';
 import './3rdparty/interact.min.js';
 
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4ortho, mat4lookAt } from './lib/utils/linalg.js';
-import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix, viewMatGetPoseParams } from './lib/utils/view.js';
+import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix, viewMatGetLookAt, viewMatGetPoseParams } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
 import { createPipeline, applyPipeline, createFullSortPipeline, applyFullSortPipeline, toTexture } from './lib/pipeline.js';
 import { permuteArray } from './lib/pointarray.js';
@@ -208,6 +208,17 @@ function bindTextures(gl, program, permTextures, vertexTextures, pipelineType) {
     gl.uniform1i(gl.getUniformLocation(program, 'covP2Texture'), 6);
 }
 
+function setTransform(gl, program, cameraXform) {
+    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'uView'), false, cameraXform.view);
+    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'uViewProj'), false, cameraXform.viewProj);
+    gl.uniform2fv(gl.getUniformLocation(program, 'uViewportScale'), cameraXform.viewportScale);
+}
+
+function setSphereTransform(gl, program, viewProjMatrix, radius, lookAtPoint) {
+    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'uViewProj'), false, viewProjMatrix);
+    gl.uniform1f(gl.getUniformLocation(program, 'uRadius'), radius);
+    gl.uniform3fv(gl.getUniformLocation(program, 'uLookAtPoint'), lookAtPoint);
+}
 
 // pipelineType can be 'full' or 'kdtree'
 function renderMain(data, cameraParams, pipelineType) {
@@ -217,7 +228,7 @@ function renderMain(data, cameraParams, pipelineType) {
     let shaderProgram = createRenderProgram(gl, pipelineType);
     let sphereProgram = createSphereRenderProgram(gl);
 
-    let circleVerts = createSphereCircles(1.0, 32);
+    let circleVerts = createSphereCircles(1.0, 64);
 
     // Create objects
     const GROUP_SIZE = 1024; //gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -242,7 +253,7 @@ function renderMain(data, cameraParams, pipelineType) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
     gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
-        new Uint32Array(32),
+        new Uint32Array(0),
         gl.STATIC_DRAW
     );
 
@@ -271,6 +282,8 @@ function renderMain(data, cameraParams, pipelineType) {
         radius: getRadius(cameraParams),
         matrix: initializeViewMatrix(cameraParams),
         lookSensitivity: 0.003,
+        sphereRadius: 3.0,
+        showSphere: false,
     }
 
     var permTextures;
@@ -297,15 +310,11 @@ function renderMain(data, cameraParams, pipelineType) {
             i += 1;
         }
 
+        cameraXform.viewportScale = new Float32Array([canvas.width, canvas.height]);
+
         // Set scene transform uniforms.
         gl.useProgram(shaderProgram);
-        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uView'), false, cameraXform.view);
-        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'uViewProj'), false, cameraXform.viewProj);
-
-        let viewportScale = new Float32Array([canvas.width, canvas.height]);
-        //let viewportScale = new Float32Array([512,512]);
-
-        gl.uniform2fv(gl.getUniformLocation(shaderProgram, 'uViewportScale'), viewportScale);
+        setTransform(gl, shaderProgram,  cameraXform);
 
         // Set viewport params.
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -326,8 +335,14 @@ function renderMain(data, cameraParams, pipelineType) {
         // Draw all the vertices as points, in the order given in the element array buffer.
         gl.drawArrays(gl.POINTS, 0, NUM_PARTICLES);
 
+        let lookAtPos = viewMatGetLookAt(viewParams.matrix, viewParams.radius);
+
         // Draw the sphere circles
-        renderSphereCircles(gl, sphereProgram, circleVerts);
+        if(viewParams.showSphere){
+            gl.useProgram(sphereProgram);
+            setSphereTransform(gl, sphereProgram, cameraXform.viewProj, viewParams.sphereRadius, lookAtPos);
+            renderSphereCircles(gl, sphereProgram, circleVerts);
+        }
 
         // Reset values of variables so that other shaders can run.
         gl.enable(gl.DEPTH_TEST);
@@ -410,6 +425,20 @@ function renderMain(data, cameraParams, pipelineType) {
     if (sensitivitySlider !== null) {
         sensitivitySlider.addEventListener('input', (event) => {
             viewParams.lookSensitivity = 0.0001 * parseFloat(event.target.value);
+        });
+    }
+
+    const sphereSizeSlider = document.getElementById('sphereSize');
+    if (sphereSizeSlider !== null) {
+        sphereSizeSlider.addEventListener('input', (event) => {
+            viewParams.sphereRadius = 0.1 * parseFloat(event.target.value); 
+        });
+    }
+
+    const showSpheresCheckBox = document.getElementById('showSpheres');
+    if (showSpheresCheckBox !== null) {
+        showSpheresCheckBox.addEventListener('change', (event) => {
+            viewParams.showSphere = event.target.checked;
         });
     }
 
