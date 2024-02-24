@@ -29,10 +29,11 @@
         <div id="helpMenu">
             <img id="logo" src="img/logo.svg" alt="Portality" />
             <br />
-            <button id="closeButton">X</button> 
+            <button id="closeButton">X</button>
 
             <!-- div id="controls"></div -->
-            <img id="controls" src="img/controls-desktop.svg" alt="Desktop controls: LMB: Orbit, MMB: Dolly/Roll, RMB: Strafe. Mobile controls: Orbit with one finger. Dolly and roll with two finger gestures. Strafe with two finger gesture." />
+            <img id="controls" src="img/controls-desktop.svg"
+                alt="Desktop controls: LMB: Orbit, MMB: Dolly/Roll, RMB: Strafe. Mobile controls: Orbit with one finger. Dolly and roll with two finger gestures. Strafe with two finger gesture." />
             <br />
             <div>
                 <button id="mobileControlsBtn">Mobile controls</button>
@@ -50,7 +51,7 @@
             </div>
             <div>
                 <label for="showSpheres">Show orbit radius sphere:</label>
-                <input type="checkbox" id="showSpheres" />  
+                <input type="checkbox" id="showSpheres" />
             </div>
 
             <div>
@@ -62,7 +63,7 @@
 </body>
 
 
-<script type="module">    
+<script type="module">
     import { renderMain } from './gausssplatrenderer.js';
     import loadSplatData from './lib/splatfile.js';
 
@@ -70,18 +71,16 @@
         position: [5, 0, 0],
         lookAt: [0, 0, 0],
         up: [0, -1, 0],
-        azimuth: 0,
-        elevation: 0
     };
 
     let pipelineType = 'high';
 
     function isTouchDevice() {
         // Combine reliable detection methods:
-        return (('ontouchstart' in window) || 
-                (navigator.maxTouchPoints > 0) || 
-                (navigator.msMaxTouchPoints > 0) || 
-                (window.matchMedia("(pointer: coarse)").matches));
+        return (('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0) ||
+            (navigator.msMaxTouchPoints > 0) ||
+            (window.matchMedia("(pointer: coarse)").matches));
     }
 
     function readParams() {
@@ -170,13 +169,13 @@
         } else {
             openFileButton.remove();
         }
-        
-        function showHelpMenu(){
+
+        function showHelpMenu() {
             displayControls();
             helpMenu.style.display = 'block';
         }
 
-        function hideHelpMenu(){
+        function hideHelpMenu() {
             helpMenu.style.display = 'none';
         }
 
@@ -193,7 +192,7 @@
                 hideHelpMenu();
             }
         });
-        
+
         const closeButton = document.getElementById('closeButton');
         closeButton.addEventListener('click', () => {
             helpMenu.style.display = 'none';

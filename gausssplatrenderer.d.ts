@@ -4,8 +4,6 @@ export namespace cameraParams {
     let position: number[];
     let lookAt: number[];
     let up: number[];
-    let azimuth: number;
-    let elevation: number;
 }
 export let pipelineType: string;
 export function loadSplatData(data: any): ({ positions: Float32Array, scales: Float32Array, colors: Float32Array, rotors: Float32Array });

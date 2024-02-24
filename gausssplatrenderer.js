@@ -25,8 +25,6 @@ let cameraParams = {
     position: [5, 0, 0],
     lookAt: [0, 0, 0],
     up: [0, -1, 0],
-    azimuth: 0,
-    elevation: 0
 };
 
 let pipelineType = 'full';
