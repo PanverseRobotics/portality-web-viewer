@@ -593,5 +593,5 @@ function readParams() {
 }
 
 
-export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap, loadSplatData, mat4multiply };
+export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap, loadSplatData, mat4multiply, viewMatGetPoseParams };
 
