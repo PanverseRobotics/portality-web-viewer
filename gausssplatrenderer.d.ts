@@ -9,4 +9,4 @@ export namespace cameraParams {
 }
 export let pipelineType: string;
 export function loadSplatData(data: any): ({ positions: Float32Array, scales: Float32Array, colors: Float32Array, rotors: Float32Array });
-export function mat4multiply(a: Float32Array, b: Float32Array): Float32Array;
+export function mat4multiply(out: Float32Array, a: Float32Array, b: Float32Array): void;
