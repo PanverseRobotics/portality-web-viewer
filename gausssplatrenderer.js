@@ -314,7 +314,7 @@ function renderMain(data, cameraParams, pipelineType) {
 
         // Set scene transform uniforms.
         gl.useProgram(shaderProgram);
-        setTransform(gl, shaderProgram,  cameraXform);
+        setTransform(gl, shaderProgram, cameraXform);
 
         // Set viewport params.
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -338,7 +338,7 @@ function renderMain(data, cameraParams, pipelineType) {
         let lookAtPos = viewMatGetLookAt(viewParams.matrix, viewParams.radius);
 
         // Draw the sphere circles
-        if(viewParams.showSphere){
+        if (viewParams.showSphere) {
             gl.useProgram(sphereProgram);
             setSphereTransform(gl, sphereProgram, cameraXform.viewProj, viewParams.sphereRadius, lookAtPos);
             renderSphereCircles(gl, sphereProgram, circleVerts);
@@ -431,7 +431,7 @@ function renderMain(data, cameraParams, pipelineType) {
     const sphereSizeSlider = document.getElementById('sphereSize');
     if (sphereSizeSlider !== null) {
         sphereSizeSlider.addEventListener('input', (event) => {
-            viewParams.sphereRadius = 0.1 * parseFloat(event.target.value); 
+            viewParams.sphereRadius = 0.1 * parseFloat(event.target.value);
         });
     }
 
@@ -593,5 +593,5 @@ function readParams() {
 }
 
 
-export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap, loadSplatData };
+export { renderMain, readParams, cameraParams, pipelineType, mouseControlMap, loadSplatData, mat4multiply };
 
