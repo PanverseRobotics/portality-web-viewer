@@ -22,9 +22,9 @@ let fpsData = {
 };
 
 let cameraParams = {
-    position: [5, 0, 0],
-    lookAt: [0, 0, 0],
-    up: [0, -1, 0],
+    position: [0, -1, 0],
+    lookAt: [0, 0.25, 0],
+    up: [0, 0, 1]
 };
 
 let pipelineType = 'full';
