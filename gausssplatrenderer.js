@@ -1,8 +1,6 @@
 import './lib/utils/linalg.js';
 import './lib/pipeline.js';
 
-import './3rdparty/interact.min.js';
-
 import { mat3transpose, mat3multiply, mat4multiply, mat4perspective, mat4ortho, mat4lookAt } from './lib/utils/linalg.js';
 import { viewUpdate, viewAutoSpin, stopAutoSpin, initializeViewMatrix, viewMatGetLookAt, viewMatGetPoseParams } from './lib/utils/view.js';
 import { rotorToRotationMatrix, rotorsToCov3D } from './lib/utils/rotors.js';
@@ -70,13 +68,7 @@ function getViewDelta(cursorPosition, lastCursorPosition, lookSensitivity) {
 
 
 
-function initCanvas() {
-    var canvas = document.getElementById("gl-canvas");
-    //canvas.width = window.innerWidth;
-    //canvas.height = window.innerHeight;
 
-    return canvas;
-}
 
 function initWebgl(canvas) {
     var gl = canvas.getContext("webgl2");
@@ -219,8 +211,7 @@ function setSphereTransform(gl, program, viewProjMatrix, radius, lookAtPoint) {
 }
 
 // pipelineType can be 'full' or 'kdtree'
-function renderMain(data, cameraParams, pipelineType) {
-    let canvas = initCanvas();
+function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) {
     let gl = initWebgl(canvas);
 
     let shaderProgram = createRenderProgram(gl, pipelineType);
@@ -296,7 +287,6 @@ function renderMain(data, cameraParams, pipelineType) {
         // Set scene transforms.
         let cameraXform = getCameraTransform(canvas, viewParams);
 
-
         // apply sorting pipeline.
         if (pipelineType == 'full') {
             applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
@@ -352,13 +342,6 @@ function renderMain(data, cameraParams, pipelineType) {
         animationFrameId = requestAnimationFrame(draw);
     }
 
-    // Function to resize the canvas to full window size
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-
-
     function handleVisibilityChange() {
         if (document.hidden) {
             cancelAnimationFrame(animationFrameId);
@@ -366,10 +349,6 @@ function renderMain(data, cameraParams, pipelineType) {
             animationFrameId = requestAnimationFrame(draw);
         }
     }
-
-    // Listen for window resize events
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Initial resize
 
     // Event listener for tab visibility
     document.addEventListener("visibilitychange", handleVisibilityChange, false);
@@ -408,12 +387,12 @@ function renderMain(data, cameraParams, pipelineType) {
         });
     }
 
-    window.addEventListener("keydown", (event) => {
+    canvas.addEventListener("keydown", (event) => {
         pressedKeys.add(event.code);
     },
         true
     );
-    window.addEventListener("keyup", (event) => {
+    canvas.addEventListener("keyup", (event) => {
         pressedKeys.delete(event.code);
     },
         false,
@@ -501,8 +480,6 @@ function renderMain(data, cameraParams, pipelineType) {
 
     canvas.addEventListener('touchmove', function (event) {
         if (event.touches.length == 1) {
-            console.log(event.touches);
-
             let mousePosition = [event.touches[0].clientX, event.touches[0].clientY];
 
             let delta = getViewDelta(mousePosition, lastMousePosition, viewParams.lookSensitivity);
@@ -527,32 +504,31 @@ function renderMain(data, cameraParams, pipelineType) {
         lastMousePosition = [0, 0];
     });
 
-    interact('#gl-canvas')
-        .gesturable({
-            onmove: function (event) {
-                // Panning
-                const dx = event.dx;
-                const dy = event.dy;
-                viewParams = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
+    // check if interactMod is not null 
+    if(interactMod !== null) {
+        interactMod('#gl-canvas')
+            .gesturable({
+                onmove: function (event) {
+                    // Panning
+                    const dx = event.dx;
+                    const dy = event.dy;
+                    viewParams = viewUpdate('strafe', [dx * viewParams.lookSensitivity, dy * viewParams.lookSensitivity], viewParams);
 
-                // Pinch zooming
-                const scale = event.ds;
-                console.log("Zoom scale: " + scale);
-                viewParams = viewUpdate('dolly', -5 * scale, viewParams);
+                    // Pinch zooming
+                    const scale = event.ds;
+                    viewParams = viewUpdate('dolly', -5 * scale, viewParams);
 
-                // Pinch rotation
-                const rotation = event.da;
-                viewParams = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
-            }
-        });
-
+                    // Pinch rotation
+                    const rotation = event.da;
+                    viewParams = viewUpdate('roll', -3.14159 * rotation / 180, viewParams);
+                }
+            });
+    }
 
     return draw;
 }
 
-function readParams() {
-    const params = new URLSearchParams(window.location.search);
-
+function readParams(params, canvas, interactMod=null) {
     // Function to parse a comma-separated string into an array of numbers
     const parseVector = (param, defaultValue) => {
         return param ? param.split(',').map(Number) : defaultValue;
@@ -585,7 +561,7 @@ function readParams() {
 
                 document.getElementById('loadingSymbol').style.display = 'none';
 
-                renderMain(splatData, cameraParams, pipelineType);
+                renderMain(canvas, splatData, cameraParams, pipelineType, interactMod);
             });
     }
 }

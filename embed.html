@@ -19,9 +19,24 @@
 </body>
 
 <script type="module">
+    import './3rdparty/interact.min.js';
+
     import { readParams } from './gausssplatrenderer.js';
 
-    readParams();
+
+    // Function to resize the canvas to full window size
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    let canvas = document.getElementById("gl-canvas");
+
+    // Listen for window resize events
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial resize
+
+    readParams(new URLSearchParams(window.location.search), canvas, interact);
 </script>
 
 </html>

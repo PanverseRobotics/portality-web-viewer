@@ -1,5 +1,5 @@
-export function renderMain(data: any, cameraParams: any, pipelineType: any): (now: any) => void;
-export function readParams(): void;
+export function renderMain(canvas: any, data: any, cameraParams: any, pipelineType: any, interactMod?: any): (now: any) => void;
+export function readParams(params: any, canvas: any, interactMod?: any): void;
 export namespace cameraParams {
     let position: number[];
     let lookAt: number[];
