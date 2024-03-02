@@ -408,7 +408,7 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
     const sphereSizeSlider = document.getElementById('sphereSize');
     if (sphereSizeSlider !== null) {
         sphereSizeSlider.addEventListener('input', (event) => {
-            viewParams.sphereRadius = 0.1 * parseFloat(event.target.value);
+            viewParams.sphereRadius = 0.03*Math.exp(0.05*parseFloat(event.target.value));
         });
     }
 
