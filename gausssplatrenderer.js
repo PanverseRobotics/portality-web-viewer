@@ -127,14 +127,17 @@ function getCameraTransform(canvas, viewParams) {
 
     let viewMatrix = viewParams.matrix;
     var viewProjMatrix = new Float32Array(16);
+    var predictedViewProjMatrix = new Float32Array(16);
 
     mat4perspective(projMatrix, Math.PI / 3, canvas.width / canvas.height, 0.1, 20.0);
     mat4multiply(viewProjMatrix, projMatrix, viewMatrix);
+    mat4multiply(predictedViewProjMatrix, projMatrix, viewParams.predictedMatrix);
 
     return {
         proj: projMatrix,
         view: viewMatrix,
-        viewProj: viewProjMatrix
+        viewProj: viewProjMatrix,
+        predictedViewProj: predictedViewProjMatrix
     }
 }
 
@@ -224,8 +227,6 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
     const N_GROUPS = Math.floor(Math.floor(data.positions.length / 3) / GROUP_SIZE);
     const NUM_PARTICLES = GROUP_SIZE * N_GROUPS;
 
-    const SORT_INTERVAL = 6;
-
     let positionData = padPositions(data.positions);
     let colorData = data.colors;
 
@@ -267,12 +268,15 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
     let lastMousePosition = [0, 0];
     let pressedKeys = new Set();
 
+    const initMatrix = initializeViewMatrix(cameraParams);
     var viewParams = {
         radius: getRadius(cameraParams),
-        matrix: initializeViewMatrix(cameraParams),
+        matrix: initMatrix,
+        predictedMatrix: initMatrix,
         lookSensitivity: 0.003,
         sphereRadius: 3.0,
         showSphere: false,
+        sortInterval: 6,
     }
 
     var permTextures;
@@ -289,10 +293,10 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
 
         // apply sorting pipeline.
         if (pipelineType == 'full') {
-            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.viewProj, Math.ceil(pipeline.sortSteps.length / SORT_INTERVAL));
+            applyFullSortPipeline(gl, pipeline, vertexTextures, cameraXform.predictedViewProj, Math.ceil(pipeline.sortSteps.length / viewParams.sortInterval));
             permTextures = [];
         } else {
-            if (((i % SORT_INTERVAL) | 0) == 0) {
+            if (((i % viewParams.sortInterval) | 0) == 0) {
                 permTextures = applyPipeline(gl, pipeline, viewParams.eyePosition, cameraXform.viewProj);
             }
             i += 1;
@@ -471,6 +475,8 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
 
     canvas.addEventListener('mouseup', function (event) {
         isMouseDown = false;
+        //viewParams.predictedMatrix = viewParams.matrix;
+        //viewParams.matrix = viewParams.predictedMatrix;
     });
 
     canvas.addEventListener('mouseleave', function (event) {
@@ -502,6 +508,7 @@ function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) 
     canvas.addEventListener('touchend', function (event) {
         isMouseDown = false;
         lastMousePosition = [0, 0];
+        viewParams.predictedMatrix = viewParams.matrix;
     });
 
     // check if interactMod is not null 
