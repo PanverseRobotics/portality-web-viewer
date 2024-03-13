@@ -27,6 +27,8 @@ let cameraParams = {
 
 let pipelineType = 'full';
 
+
+
 const mouseControlMap = {
     // Left mouse button
     1: {
@@ -213,6 +215,9 @@ function setSphereTransform(gl, program, viewProjMatrix, radius, lookAtPoint) {
 // pipelineType can be 'full' or 'kdtree'
 function renderMain(canvas, data, cameraParams, pipelineType, interactMod=null) {
     let gl = initWebgl(canvas);
+
+    canvas.setAttribute('tabindex', '0');
+    canvas.focus()
 
     let shaderProgram = createRenderProgram(gl, pipelineType);
     let sphereProgram = createSphereRenderProgram(gl);
